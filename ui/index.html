@@ -1,0 +1,1964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Linkbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---------- tokens ---------- */
+  :root{
+    --ink-0:#0E0E0C;
+    --ink-1:#15140F;
+    --ink-2:#1B1A14;
+    --ink-3:#23211A;
+    --rule:#26241F;
+    --rule-soft:#1F1D17;
+    --bone:#E8E4D9;
+    --bone-2:#BFB9A8;
+    --bone-3:#8E8876;
+    --bone-4:#5C5849;
+
+    --signal:#E8B447;
+    --signal-deep:#B8862E;
+    --signal-glow:rgba(232,180,71,.10);
+
+    --good:#7FAE6E;
+    --warn:#D89A4B;
+    --bad:#C56B5C;
+    --info:#6E8AA7;
+
+    --f-display:'Fraunces', 'Times New Roman', serif;
+    --f-ui:'Geist', system-ui, sans-serif;
+    --f-mono:'Geist Mono', ui-monospace, monospace;
+
+    --sidebar: 248px;
+    --header: 56px;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  html{
+    background:var(--ink-0);
+    color:var(--bone);
+    font-family:var(--f-ui);
+    font-size:13px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    font-feature-settings:"ss01","cv11";
+  }
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 1200px 600px at 80% -10%, rgba(232,180,71,.025), transparent 70%),
+      var(--ink-0);
+    background-attachment: fixed;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .91  0 0 0 0 .89  0 0 0 0 .85  0 0 0 .025 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode:overlay; opacity:.5;
+  }
+
+  button{ font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer; letter-spacing:inherit; }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:var(--signal); color:var(--ink-0); }
+
+  /* ---------- shell ---------- */
+  .shell{
+    position:relative; z-index:1;
+    display:grid;
+    grid-template-columns: var(--sidebar) 1fr;
+    min-height:100vh;
+  }
+
+  /* =================================================
+     SIDEBAR
+     ================================================= */
+  .sidebar{
+    border-right:1px solid var(--rule);
+    background:var(--ink-1);
+    position:sticky; top:0; align-self:start;
+    height:100vh;
+    display:flex; flex-direction:column;
+  }
+
+  .brand{
+    padding: 20px 22px 22px;
+    border-bottom:1px solid var(--rule);
+  }
+  .brand .mark{
+    font-family:var(--f-display);
+    font-style:italic; font-weight:500;
+    font-size:24px; letter-spacing:-.015em;
+    color:var(--bone);
+    line-height:1;
+  }
+  .brand .mark::after{
+    content:"·"; color:var(--signal); margin-left:5px; font-style:normal;
+  }
+  .brand .studio{
+    margin-top:6px;
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.18em;
+  }
+
+  .nav-scroll{ flex:1; overflow-y:auto; padding: 14px 0 8px; }
+
+  .nav-section{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.22em;
+    padding: 14px 22px 8px;
+  }
+
+  .nav-item{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    align-items:center;
+    gap:10px;
+    padding: 9px 22px;
+    cursor:pointer;
+    color:var(--bone-2);
+    font-size:13px;
+    border-left:2px solid transparent;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .nav-item:hover{ background:var(--ink-2); color:var(--bone); }
+  .nav-item.on{
+    color:var(--bone);
+    background: linear-gradient(90deg, rgba(232,180,71,.08), transparent 70%);
+    border-left-color: var(--signal);
+  }
+  .nav-item .badge{
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-item.on .badge{ color:var(--signal); }
+  .nav-item .badge.alert{
+    color:var(--ink-0); background:var(--signal);
+    padding: 1px 6px;
+  }
+
+  .sidebar-foot{
+    padding: 12px 22px;
+    border-top:1px solid var(--rule);
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .sidebar-foot .av{
+    width:22px; height:22px; border-radius:50%;
+    background:linear-gradient(135deg,#C99A4F,#7E5A2A);
+    display:grid; place-items:center;
+    color:#1a140a; font-family:var(--f-display); font-style:italic; font-weight:600; font-size:12px;
+  }
+  .sidebar-foot .who{ color:var(--bone-2); text-transform:none; letter-spacing:0; font-family:var(--f-ui); font-size:13px; }
+
+  /* =================================================
+     MAIN
+     ================================================= */
+  .main{ min-width:0; }
+
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    height:var(--header);
+    border-bottom:1px solid var(--rule);
+    background: rgba(14,14,12,.85);
+    backdrop-filter: blur(8px);
+    display:flex; align-items:center;
+    padding: 0 32px;
+    gap: 24px;
+  }
+  .topbar h1{
+    margin:0;
+    font-family:var(--f-display); font-style:italic;
+    font-weight:400;
+    font-size:22px; letter-spacing:-.01em;
+    color:var(--bone);
+  }
+  .topbar h1 small{
+    font-style:normal; font-family:var(--f-mono);
+    font-size:10.5px; color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.16em;
+    margin-left:14px; padding-left:14px;
+    border-left:1px solid var(--rule);
+  }
+  .topbar .topbar-right{
+    margin-left:auto;
+    display:flex; align-items:center; gap:14px;
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-3);
+    text-transform:uppercase; letter-spacing:.16em;
+  }
+  .topbar .health{
+    display:inline-flex; align-items:center; gap:6px;
+    cursor:pointer;
+    padding: 4px 10px;
+    border:1px solid var(--rule);
+  }
+  .topbar .health .dot{
+    width:6px; height:6px; border-radius:50%; background:var(--good);
+    box-shadow:0 0 0 2px rgba(127,174,110,.18);
+  }
+  .topbar .health.warn .dot{ background:var(--warn); box-shadow:0 0 0 2px rgba(216,154,75,.18); }
+
+  .page{ padding: 28px 36px 80px; max-width: 1280px; }
+
+  .page-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:16px;
+    margin-bottom:24px;
+  }
+  .page-title{
+    font-family:var(--f-display); font-style:italic;
+    font-weight:400;
+    font-size:38px; letter-spacing:-.02em;
+    color:var(--bone);
+    line-height:1;
+    margin:0;
+  }
+  .page-title small{
+    font-style:normal; font-family:var(--f-mono); font-size:11px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.18em;
+    margin-left:14px; padding-left:14px;
+    border-left:1px solid var(--rule);
+  }
+  .page-actions{ display:flex; gap:8px; align-items:center; }
+
+  .toggles{
+    display:flex; gap:0;
+    font-family:var(--f-mono); font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.14em;
+    border:1px solid var(--rule);
+  }
+  .toggles button{
+    padding: 6px 12px;
+    border-right:1px solid var(--rule);
+    color:var(--bone-3);
+  }
+  .toggles button:last-child{ border-right:0; }
+  .toggles button:hover{ color:var(--bone); }
+  .toggles button.on{ background:var(--bone); color:var(--ink-0); }
+
+  /* shared button */
+  .btn{
+    font-family:var(--f-mono);
+    font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.14em;
+    padding: 7px 12px;
+    border:1px solid var(--rule);
+    background:var(--ink-2);
+    color:var(--bone-2);
+    transition: all .12s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{ color:var(--bone); border-color:var(--bone-3); background:var(--ink-3); }
+  .btn.primary{ color:var(--ink-0); background:var(--signal); border-color:var(--signal); }
+  .btn.primary:hover{ background:#F1C260; border-color:#F1C260; }
+  .btn.ghost{ background:transparent; }
+  .btn.tiny{ padding: 4px 8px; font-size:9.5px; }
+
+  /* page visibility */
+  .page-view{ display:none; }
+  .page-view.active{ display:block; }
+
+  /* =================================================
+     INBOX
+     ================================================= */
+  .inbox-grid{
+    display:grid;
+    grid-template-columns: 56px 1fr;
+    gap:0;
+  }
+
+  /* priority rail (signature element kept) */
+  .rail{
+    position:sticky; top: calc(var(--header) + 28px);
+    align-self:start;
+    height: calc(100vh - var(--header) - 56px);
+    border-right:1px solid var(--rule);
+    padding: 0 8px 0 0;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .rail-bars{
+    flex:1; display:flex; flex-direction:column; gap:2px;
+    overflow-y:auto;
+    padding-right:4px;
+  }
+  .rail-bar{
+    height:14px;
+    display:grid;
+    grid-template-columns: 26px 1fr;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    transition: filter .12s;
+  }
+  .rail-bar:hover{ filter:brightness(1.4); }
+  .rail-bar .num{
+    font-family:var(--f-mono); font-size:9px; color:var(--bone-4);
+    text-align:right; font-variant-numeric: tabular-nums;
+  }
+  .rail-bar .fill{
+    height:5px;
+    background:linear-gradient(90deg, var(--signal), var(--signal-deep));
+  }
+  .rail-bar.dim .fill{ background:linear-gradient(90deg, var(--bone-4), #2f2c25); }
+  .rail-bar.active .num{ color:var(--signal); }
+  .rail-bar.active .fill{ box-shadow:0 0 0 1px var(--signal-glow), 0 0 8px var(--signal-glow); }
+  .rail-foot{
+    border-top:1px solid var(--rule);
+    padding: 8px 0;
+    text-align:center;
+    font-family:var(--f-mono); font-size:9px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.18em;
+  }
+
+  /* feed */
+  .feed{ padding: 0 0 0 18px; min-width:0; }
+  .filters{
+    display:flex; gap:0; align-items:center; margin-bottom: 8px;
+    font-family:var(--f-mono); font-size:10.5px;
+    text-transform:uppercase; letter-spacing:.14em;
+    color:var(--bone-3);
+  }
+  .filters .pill{
+    padding:5px 12px;
+    border:1px solid var(--rule);
+    border-right:0;
+    transition: color .12s, background .12s;
+  }
+  .filters .pill:hover{ color:var(--bone); background:var(--ink-2); }
+  .filters .pill:first-child{ border-top-left-radius:2px; border-bottom-left-radius:2px; }
+  .filters .pill:last-child{ border-right:1px solid var(--rule); border-top-right-radius:2px; border-bottom-right-radius:2px; }
+  .filters .pill.on{ color:var(--ink-0); background:var(--bone); border-color:var(--bone); }
+  .filters .right{
+    margin-left:auto;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.16em; font-size:10px;
+  }
+
+  .events{ display:flex; flex-direction:column; }
+
+  .ev{
+    display:grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items:start;
+    gap:18px;
+    padding: 18px 0;
+    border-bottom:1px solid var(--rule);
+    cursor:pointer;
+    position:relative;
+    transition: background .12s;
+  }
+  .ev:hover{ background: linear-gradient(90deg, transparent, rgba(232,180,71,.02), transparent); }
+  .ev.expanded{ background: linear-gradient(90deg, rgba(232,180,71,.05), transparent 70%); }
+  .ev.expanded::before{
+    content:""; position:absolute; left:-18px; top:0; bottom:0; width:2px; background:var(--signal);
+  }
+
+  /* score with hover popover */
+  .score-wrap{
+    position:relative; text-align:right; padding-top:2px;
+  }
+  .score{
+    font-family:var(--f-mono);
+    font-variant-numeric: tabular-nums;
+    font-size:24px; font-weight:500;
+    color:var(--bone);
+    letter-spacing:-.02em;
+    line-height:1;
+    cursor:help;
+  }
+  .score.hot{ color:var(--signal); }
+  .score.cold{ color:var(--bone-3); }
+  .score-wrap:hover .why-pop{ opacity:1; transform: translateY(0); pointer-events:auto; }
+  .why-pop{
+    position:absolute; top: calc(100% + 8px); left: 0;
+    width: 240px;
+    background: var(--ink-2);
+    border:1px solid var(--rule);
+    padding: 12px;
+    font-family:var(--f-mono); font-size:10.5px;
+    text-align:left;
+    z-index:20;
+    opacity:0; transform: translateY(-4px); pointer-events:none;
+    transition: opacity .12s, transform .12s;
+    box-shadow: 0 12px 32px rgba(0,0,0,.4);
+  }
+  .why-pop h5{
+    margin:0 0 10px;
+    font-size:9.5px; font-weight:500;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.18em;
+  }
+  .why-pop .term{
+    display:grid; grid-template-columns: 1fr auto;
+    align-items:center;
+    gap:8px;
+    padding: 4px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .why-pop .term .l{ color:var(--bone-2); }
+  .why-pop .term .v{ color:var(--bone); }
+  .why-pop .total{
+    margin-top:8px; padding-top:8px;
+    border-top:1px dashed var(--rule);
+    display:flex; justify-content:space-between;
+    color:var(--signal); font-size:11.5px;
+  }
+
+  .ev .body{ min-width:0; }
+  .ev .meta-row{
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.14em;
+    margin-bottom:6px;
+  }
+  .ev .src{
+    display:inline-flex; align-items:center; gap:4px;
+    padding: 2px 6px;
+    border:1px solid var(--rule);
+  }
+  .ev .src.qbo{ color:#92B68F; }
+  .ev .src.harvest{ color:#D8B070; }
+  .ev .src.dropboxsign{ color:#7E9FCE; }
+  .ev .src.airtable{ color:#C68B98; }
+  .ev .src.gmail{ color:#C97A6E; }
+  .ev .src.linkbook{ color:var(--bone-3); }
+  .ev .age{ margin-left:auto; }
+
+  .ev .title{
+    font-size:15px;
+    color:var(--bone);
+    line-height:1.4;
+    margin-bottom:4px;
+    font-weight:400;
+  }
+  .ev .title b{
+    font-weight:500;
+    color:var(--signal);
+    font-family:var(--f-mono);
+    font-size:13px;
+    letter-spacing:-.01em;
+    padding: 0 2px;
+    background:rgba(232,180,71,.06);
+    border-bottom:1px solid rgba(232,180,71,.25);
+  }
+  .ev .sub{
+    color:var(--bone-3); font-size:12px;
+  }
+  .ev .sub .num{
+    font-family:var(--f-mono); font-variant-numeric: tabular-nums;
+    color:var(--bone-2);
+  }
+
+  .ev .actions{
+    display:flex; gap:6px; align-items:flex-start; flex-wrap:wrap;
+    padding-top:2px; justify-content:flex-end;
+    max-width: 280px;
+  }
+
+  /* simplified proposal: rationale + preview */
+  .proposal{
+    margin-top:14px;
+    border:1px solid var(--rule);
+    background: var(--ink-1);
+    position:relative;
+  }
+  .proposal::before{
+    content:""; position:absolute; top:0; left:0; bottom:0; width:2px;
+    background: linear-gradient(180deg, var(--signal), var(--signal-deep));
+  }
+  .proposal-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 14px;
+    border-bottom:1px solid var(--rule);
+    font-family:var(--f-mono); font-size:10px;
+    text-transform:uppercase; letter-spacing:.14em;
+    color:var(--bone-3);
+  }
+  .proposal-head .agent{
+    color:var(--signal);
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .proposal-head .agent::before{ content:"◆"; font-size:8px; }
+  .proposal-head .conf{
+    margin-left:auto;
+    display:flex; align-items:center; gap:8px;
+  }
+  .proposal-head .conf .bar{
+    width:60px; height:3px; background:var(--ink-3); position:relative;
+  }
+  .proposal-head .conf .bar::after{
+    content:""; position:absolute; left:0; top:0; bottom:0;
+    background: linear-gradient(90deg, var(--signal-deep), var(--signal));
+    width: var(--w);
+  }
+  .proposal-rationale{
+    padding: 12px 14px;
+    color:var(--bone-2);
+    font-style:italic;
+    font-family:var(--f-display);
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .proposal-preview{
+    padding: 16px 18px;
+    border-top:1px dashed var(--rule);
+    background: rgba(0,0,0,.15);
+  }
+  .proposal-preview .from{
+    font-family:var(--f-mono); font-size:10.5px;
+    color:var(--bone-3);
+    margin-bottom: 12px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--rule);
+    display:grid; grid-template-columns:50px 1fr; gap:6px 10px;
+  }
+  .proposal-preview .from b{ color:var(--bone-4); font-weight:400; text-transform:uppercase; letter-spacing:.12em; font-size:9.5px; padding-top:2px; }
+  .proposal-preview .from .v{ color:var(--bone); font-family:var(--f-ui); font-size:12.5px; }
+  .proposal-preview .body{
+    font-family:var(--f-display); font-size:14px; line-height:1.6; color:var(--bone);
+    white-space: pre-line;
+  }
+
+  /* legs (composite preview) */
+  .legs-preview{
+    padding: 14px 18px;
+    background: rgba(0,0,0,.15);
+    border-top:1px dashed var(--rule);
+  }
+  .legs-preview ol{
+    list-style:none; padding:0; margin:0;
+    counter-reset: leg;
+  }
+  .legs-preview li{
+    counter-increment: leg;
+    display:grid; grid-template-columns: 22px 1fr auto; gap:12px; align-items:center;
+    padding: 8px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-size:13px;
+  }
+  .legs-preview li:last-child{ border-bottom:0; }
+  .legs-preview li::before{
+    content: counter(leg);
+    font-family:var(--f-display); font-style:italic; font-weight:300;
+    font-size:18px; color:var(--bone-4);
+  }
+  .legs-preview li b{ color:var(--bone); font-weight:500; }
+  .legs-preview li span{ color:var(--bone-3); display:block; font-size:11.5px; margin-top:1px; }
+  .legs-preview li .where{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+  }
+
+  .proposal-foot{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 14px;
+    border-top:1px solid var(--rule);
+  }
+  .proposal-foot .safe{
+    flex:1;
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+  }
+  .proposal-foot .safe i{ color:var(--bone-3); font-style:normal; }
+
+  /* queued countdown */
+  .queued{
+    margin-top:14px;
+    border:1px solid var(--signal);
+    background: linear-gradient(180deg, rgba(232,180,71,.10), rgba(232,180,71,.04));
+    padding: 12px 14px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .queued .ring{
+    --p: 18;
+    width:32px; height:32px; border-radius:50%;
+    background: conic-gradient(var(--signal) calc(var(--p)*1%), var(--ink-2) 0);
+    position:relative; flex:none;
+  }
+  .queued .ring::after{
+    content:""; position:absolute; inset:3px; background:var(--ink-1); border-radius:50%;
+  }
+  .queued .ring span{
+    position:relative; z-index:1;
+    display:grid; place-items:center; width:100%; height:100%;
+    font-family:var(--f-mono); font-size:11px; color:var(--bone);
+    font-variant-numeric:tabular-nums;
+  }
+  .queued .msg{
+    flex:1; font-family:var(--f-mono); font-size:11px;
+    color:var(--bone-2); text-transform:uppercase; letter-spacing:.14em;
+  }
+  .queued .msg b{ color:var(--signal); font-weight:500; }
+  .queued .undo{
+    border:1px solid var(--signal); color:var(--signal);
+    padding: 7px 14px;
+    font-family:var(--f-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.18em;
+  }
+  .queued .undo:hover{ background:var(--signal); color:var(--ink-0); }
+
+  /* slide-over detail */
+  .slideover{
+    position:fixed; top:0; right:0; bottom:0;
+    width: 460px;
+    background: var(--ink-1);
+    border-left:1px solid var(--rule);
+    box-shadow: -24px 0 60px rgba(0,0,0,.4);
+    transform: translateX(100%);
+    transition: transform .25s cubic-bezier(.2,.7,.3,1);
+    z-index: 100;
+    overflow-y:auto;
+  }
+  .slideover.open{ transform: translateX(0); }
+  .slideover-head{
+    padding: 18px 22px;
+    border-bottom:1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:12px;
+  }
+  .slideover-head h3{
+    margin:0;
+    font-family:var(--f-display); font-style:italic; font-weight:400;
+    font-size:24px; letter-spacing:-.01em;
+  }
+  .slideover-head .crumbs{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.16em;
+    margin-bottom:6px;
+  }
+  .slideover-head .crumbs span + span::before{ content:"›"; margin: 0 6px; color:var(--rule); }
+  .slideover-head .x{
+    font-family:var(--f-mono); font-size:18px;
+    color:var(--bone-3); padding:2px 8px; border:1px solid var(--rule);
+  }
+  .slideover-body{ padding: 18px 22px 60px; }
+
+  .ledger .row{
+    display:grid; grid-template-columns: 1fr auto;
+    padding: 9px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-family:var(--f-mono); font-size:11.5px;
+    align-items:baseline;
+  }
+  .ledger .row .k{
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em; font-size:10px;
+  }
+  .ledger .row .v{
+    font-variant-numeric: tabular-nums; color:var(--bone); text-align:right;
+  }
+  .ledger .row .v .neg{ color:var(--bad); }
+  .ledger .row .v .pos{ color:var(--good); }
+
+  .timeline h4{
+    margin: 24px 0 10px;
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.18em;
+    font-weight:500;
+  }
+  .tl .ev2{
+    display:grid; grid-template-columns: 60px 1fr;
+    gap:12px; padding: 9px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-size:12px;
+  }
+  .tl .ev2 .when{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.12em;
+    text-align:right; padding-top:2px;
+  }
+  .tl .ev2 .what b{ color:var(--bone); font-weight:500; }
+  .tl .ev2 .what{ color:var(--bone-3); }
+  .tl .ev2 .what em{ font-style:italic; color:var(--bone-3); font-family:var(--f-display); font-size:13px; }
+
+  .scrim{
+    position:fixed; inset:0; background: rgba(0,0,0,.4); z-index:99;
+    opacity:0; pointer-events:none;
+    transition: opacity .2s;
+  }
+  .scrim.on{ opacity:1; pointer-events:auto; }
+
+  /* =================================================
+     ACTIONS (queue page)
+     ================================================= */
+  .queue-stats{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:1px;
+    background:var(--rule);
+    border:1px solid var(--rule);
+    margin-bottom: 24px;
+  }
+  .queue-stat{
+    background:var(--ink-1);
+    padding: 16px 20px;
+  }
+  .queue-stat .lbl{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.16em;
+    margin-bottom: 8px;
+  }
+  .queue-stat .num{
+    font-family:var(--f-display); font-style:italic; font-weight:300;
+    font-size:32px; color:var(--bone);
+    line-height:1;
+  }
+  .queue-stat .num.signal{ color:var(--signal); }
+
+  .queue-list{
+    border:1px solid var(--rule);
+  }
+  .qrow{
+    display:grid;
+    grid-template-columns: 4px auto 1fr auto auto;
+    gap:14px; padding: 14px 18px;
+    border-bottom:1px solid var(--rule-soft);
+    background:var(--ink-1);
+    cursor:pointer;
+    align-items:center;
+    transition: background .12s;
+  }
+  .qrow:last-child{ border-bottom:0; }
+  .qrow:hover{ background:var(--ink-2); }
+  .qrow.expanded{ background: linear-gradient(90deg, rgba(232,180,71,.05), transparent 70%); }
+  .qrow .stripe{
+    width:2px; height:32px; background:var(--bone-4);
+  }
+  .qrow.proposed .stripe{ background:var(--signal); }
+  .qrow.queued .stripe{ background:var(--info); animation: pulse 1.4s ease-in-out infinite; }
+  .qrow.failed .stripe{ background:var(--bad); }
+  .qrow.done .stripe{ background:var(--good); }
+  @keyframes pulse{ 0%,100%{ opacity:.45 } 50%{ opacity:1 } }
+
+  .qrow .state{
+    font-family:var(--f-mono); font-size:9.5px;
+    text-transform:uppercase; letter-spacing:.14em;
+    color:var(--bone-4);
+    min-width: 78px;
+  }
+  .qrow.proposed .state{ color:var(--signal); }
+  .qrow.queued .state{ color:var(--info); }
+  .qrow.failed .state{ color:var(--bad); }
+  .qrow.done .state{ color:var(--good); }
+
+  .qrow .head{ font-size:13px; color:var(--bone); line-height:1.4; }
+  .qrow .head .num{ font-family:var(--f-mono); color:var(--signal); }
+  .qrow .head span{ color:var(--bone-3); display:block; font-family:var(--f-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; margin-top:3px; }
+  .qrow .when{
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+    text-align:right;
+  }
+  .qrow .chev{
+    color:var(--bone-4);
+    font-family:var(--f-mono);
+    transition: transform .15s, color .15s;
+  }
+  .qrow.expanded .chev{ color:var(--signal); transform: rotate(90deg); }
+
+  /* expanded proposal panel */
+  .qexpand{
+    display:none;
+    background: rgba(0,0,0,.18);
+    border-bottom:1px solid var(--rule-soft);
+    padding: 22px 28px 26px;
+  }
+  .qrow.expanded + .qexpand{ display:block; }
+  .qexpand-grid{
+    display:grid; grid-template-columns: 1.5fr 1fr; gap: 28px;
+  }
+  .qexpand .preview-doc{
+    border:1px solid var(--rule);
+    padding: 22px 26px;
+    background: #14130E;
+    font-family:var(--f-display); font-size:14px; line-height:1.6; color:var(--bone);
+  }
+  .qexpand .preview-doc .from{
+    font-family:var(--f-mono); font-size:10.5px;
+    color:var(--bone-3); text-transform:uppercase; letter-spacing:.12em;
+    margin-bottom: 16px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--rule);
+    display:grid; grid-template-columns:50px 1fr; gap:6px 10px;
+  }
+  .qexpand .preview-doc .from b{ color:var(--bone-4); font-weight:400; font-size:9.5px; padding-top:2px; }
+  .qexpand .preview-doc .from .v{ color:var(--bone); font-family:var(--f-ui); font-size:12.5px; text-transform:none; letter-spacing:0; }
+  .qexpand .preview-doc p{ margin: 0 0 12px; }
+  .qexpand .preview-doc .sig{ margin-top:18px; color:var(--bone-3); font-style:italic; }
+
+  .qexpand .preview-foot{
+    display:flex; align-items:center; gap:10px;
+    margin-top:12px;
+  }
+  .qexpand .preview-foot .safe{
+    flex:1;
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+  }
+  .qexpand .preview-foot .safe i{ color:var(--bone-3); font-style:normal; }
+
+  .qside{
+    display:flex; flex-direction:column; gap:18px;
+  }
+  .qpanel{
+    border:1px solid var(--rule);
+    background:var(--ink-1);
+  }
+  .qpanel-head{
+    padding: 9px 14px;
+    border-bottom:1px solid var(--rule);
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.18em;
+    display:flex; justify-content:space-between;
+  }
+  .qpanel-body{ padding: 12px 14px; }
+  .qpanel .legs{ list-style:none; padding:0; margin:0; }
+  .qpanel .legs li{
+    display:grid; grid-template-columns: 16px 1fr auto;
+    gap:10px; padding: 8px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-size:12px; align-items:center;
+  }
+  .qpanel .legs li:last-child{ border-bottom:0; }
+  .qpanel .legs .check{
+    width:13px; height:13px; border-radius:50%;
+    background:var(--ink-3); border:1px solid var(--rule);
+  }
+  .qpanel .legs .check.done{ background:var(--good); border-color:var(--good); }
+  .qpanel .legs .check.run{ background:var(--info); border-color:var(--info); animation: pulse 1.4s ease-in-out infinite; }
+  .qpanel .legs b{ color:var(--bone); font-weight:500; }
+  .qpanel .legs span{ color:var(--bone-3); display:block; font-size:11px; margin-top:1px; }
+  .qpanel .legs .where{
+    font-family:var(--f-mono); font-size:9px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+  }
+
+  .audit{ list-style:none; padding:0; margin:0; }
+  .audit li{
+    display:grid; grid-template-columns: 60px 1fr;
+    gap:12px; padding: 8px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-size:11.5px;
+  }
+  .audit li:last-child{ border-bottom:0; }
+  .audit .when{
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em;
+    padding-top:2px;
+  }
+  .audit b{ color:var(--bone); font-weight:500; }
+  .audit em{ font-style:italic; color:var(--bone-3); font-family:var(--f-display); font-size:12.5px; }
+  .audit code{
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-3); background:var(--ink-2);
+    padding:1px 4px; border:1px solid var(--rule);
+  }
+
+  /* =================================================
+     OVERVIEW PAGES (Cash, Pipeline, etc.)
+     ================================================= */
+  .stat-grid{
+    display:grid;
+    gap:1px;
+    background:var(--rule);
+    border:1px solid var(--rule);
+    margin-bottom:28px;
+  }
+  .stat-grid.cols-3{ grid-template-columns: repeat(3, 1fr); }
+  .stat-grid.cols-4{ grid-template-columns: repeat(4, 1fr); }
+  .stat{
+    background:var(--ink-1);
+    padding: 22px 24px;
+  }
+  .stat .lbl{
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.18em;
+    margin-bottom: 12px;
+  }
+  .stat .num{
+    font-family:var(--f-display); font-style:italic; font-weight:300;
+    font-size:42px; letter-spacing:-.025em;
+    color:var(--bone);
+    line-height:1;
+  }
+  .stat .num.signal{ color:var(--signal); }
+  .stat .num small{
+    font-style:normal; font-family:var(--f-mono);
+    font-size:14px; color:var(--bone-4);
+    margin-left:4px; letter-spacing:0;
+  }
+  .stat .delta{
+    margin-top:10px;
+    font-family:var(--f-mono); font-size:10.5px;
+    color:var(--bone-3);
+  }
+  .stat .delta.pos{ color:var(--good); }
+  .stat .delta.neg{ color:var(--bad); }
+  .stat .spark{ margin-top:14px; height:32px; display:block; }
+  .spark-line{ stroke:var(--signal); stroke-width:1.5; fill:none; }
+  .spark-area{ fill:url(#sparkfill); opacity:.35; }
+
+  .section-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:10px; margin: 28px 0 16px;
+  }
+  .section-head:first-child{ margin-top:0; }
+  .section-head h3{
+    margin:0; font-family:var(--f-display); font-style:italic;
+    font-weight:400; font-size:22px; letter-spacing:-.01em;
+  }
+  .section-head .meta{
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.16em;
+  }
+
+  .two-col{ display:grid; grid-template-columns: 1fr 1fr; gap:32px; }
+
+  /* aging bars */
+  .aging-buckets{
+    display:flex; align-items:flex-end; gap:1px;
+    height: 220px;
+    padding-top:24px;
+    position:relative;
+  }
+  .aging-buckets::before{
+    content:""; position:absolute; left:0; right:0; bottom:32px;
+    border-bottom:1px solid var(--rule);
+  }
+  .bucket{ flex:1; display:flex; flex-direction:column; align-items:center; }
+  .bucket .bar{
+    width:100%;
+    background: linear-gradient(180deg, var(--signal-deep), var(--ink-2));
+    border:1px solid var(--rule); border-bottom:0;
+    position:relative;
+  }
+  .bucket .bar::after{
+    content:""; position:absolute; left:0; right:0; top:0; height:2px;
+    background:var(--signal);
+  }
+  .bucket.b30 .bar{ background: linear-gradient(180deg, #B8862E, var(--ink-2)); }
+  .bucket.b60 .bar{ background: linear-gradient(180deg, #C56B5C, var(--ink-2)); }
+  .bucket.b60 .bar::after{ background:var(--bad); }
+  .bucket.b90 .bar{ background: linear-gradient(180deg, #C56B5C, var(--ink-2)); opacity:.7; }
+  .bucket.b90 .bar::after{ background:var(--bad); }
+  .bucket .v{ font-family:var(--f-display); font-style:italic; font-size:18px; color:var(--bone); margin-top:8px; }
+  .bucket .k{ font-family:var(--f-mono); font-size:9.5px; color:var(--bone-4); text-transform:uppercase; letter-spacing:.16em; margin-top:2px; }
+
+  /* lists */
+  .top-list{ display:flex; flex-direction:column; }
+  .top-list .row{
+    display:grid; grid-template-columns: 22px 1fr auto auto;
+    gap:14px; padding: 12px 0;
+    border-bottom:1px solid var(--rule-soft);
+    align-items:center; font-size:12.5px;
+  }
+  .top-list .rk{ font-family:var(--f-display); font-style:italic; font-size:18px; color:var(--bone-4); }
+  .top-list .who b{ color:var(--bone); font-weight:500; }
+  .top-list .who span{ color:var(--bone-3); font-size:11px; }
+  .top-list .age{ font-family:var(--f-mono); font-size:10.5px; color:var(--bad); text-transform:uppercase; letter-spacing:.12em; }
+  .top-list .age.warn{ color:var(--warn); }
+  .top-list .age.ok{ color:var(--good); }
+  .top-list .amt{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--bone); font-size:13.5px; font-weight:500; }
+
+  /* funnel */
+  .funnel{ display:flex; flex-direction:column; gap:0; }
+  .funnel-row{
+    display:grid; grid-template-columns: 110px 1fr 80px 90px;
+    align-items:center; gap:18px;
+    padding: 12px 0;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .funnel-row .stage{ font-family:var(--f-display); font-style:italic; font-size:18px; color:var(--bone); }
+  .funnel-row .bar-wrap{ height:14px; background:var(--ink-2); position:relative; border:1px solid var(--rule); }
+  .funnel-row .bar-wrap::after{
+    content:""; position:absolute; left:0; top:0; bottom:0; width: var(--w);
+    background: linear-gradient(90deg, var(--signal), var(--signal-deep));
+  }
+  .funnel-row .n{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--bone); font-size:14px; text-align:right; }
+  .funnel-row .v{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--bone-3); font-size:11.5px; text-align:right; }
+
+  /* heatmap */
+  .heat{
+    display:grid;
+    grid-template-columns: 130px repeat(14, 1fr);
+    gap:3px;
+    align-items:center;
+    font-family:var(--f-mono); font-size:10.5px;
+  }
+  .heat .col-h{ color:var(--bone-4); text-transform:uppercase; letter-spacing:.14em; font-size:9px; text-align:center; padding: 6px 0; border-bottom:1px solid var(--rule-soft); }
+  .heat .row-h{ color:var(--bone-2); padding: 8px 12px 8px 0; text-align:right; font-family:var(--f-ui); font-size:12px; }
+  .heat .cell{ aspect-ratio: 1 / 1; background:var(--ink-2); border:1px solid var(--rule-soft); cursor:pointer; }
+  .heat .cell[data-v="0"]{ background:var(--ink-2); }
+  .heat .cell[data-v="1"]{ background:rgba(232,180,71,.15); }
+  .heat .cell[data-v="2"]{ background:rgba(232,180,71,.35); }
+  .heat .cell[data-v="3"]{ background:rgba(232,180,71,.55); }
+  .heat .cell[data-v="4"]{ background:rgba(232,180,71,.85); }
+  .heat .cell[data-v="5"]{ background:var(--signal); }
+  .heat .cell[data-v="-1"]{ background:repeating-linear-gradient(45deg, var(--ink-2), var(--ink-2) 4px, transparent 4px, transparent 8px); }
+
+  .heat-legend{
+    margin-top:14px; display:flex; align-items:center; gap:14px;
+    font-family:var(--f-mono); font-size:10px; color:var(--bone-4);
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .heat-legend .scale{ display:flex; gap:2px; }
+  .heat-legend .scale div{ width:18px; height:14px; border:1px solid var(--rule-soft); }
+
+  /* tables */
+  .tbl{ width:100%; border-collapse:collapse; font-size:13px; }
+  .tbl thead th{
+    text-align:left;
+    font-family:var(--f-mono); font-size:10px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.16em;
+    font-weight:500;
+    padding: 10px 14px 10px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  .tbl tbody td{
+    padding: 14px 14px 14px 0;
+    border-bottom:1px solid var(--rule-soft);
+    vertical-align:middle;
+  }
+  .tbl tbody tr:hover{ background:var(--ink-2); }
+  .tbl .name b{ color:var(--bone); font-weight:500; }
+  .tbl .name span{ display:block; color:var(--bone-3); font-size:11.5px; }
+  .tbl .nu{ font-family:var(--f-mono); font-variant-numeric:tabular-nums; color:var(--bone); }
+  .tbl .pos{ color:var(--good); }
+  .tbl .neg{ color:var(--bad); }
+
+  .ph-status{ display:inline-flex; align-items:center; gap:8px; font-family:var(--f-mono); font-size:10px; text-transform:uppercase; letter-spacing:.16em; }
+  .ph-dot{ width:8px; height:8px; border-radius:50%; }
+  .ph-dot.green{ background:var(--good); box-shadow:0 0 0 2px rgba(127,174,110,.18); }
+  .ph-dot.amber{ background:var(--warn); box-shadow:0 0 0 2px rgba(216,154,75,.18); }
+  .ph-dot.red{ background:var(--bad); box-shadow:0 0 0 2px rgba(197,107,92,.18); }
+  .budget-bar{ margin-top:5px; height:3px; background:var(--ink-3); width:120px; position:relative; }
+  .budget-bar i{ position:absolute; left:0; top:0; bottom:0; background:var(--signal); }
+  .budget-bar i.over{ background:var(--bad); }
+
+  .tier{
+    display:inline-block;
+    font-family:var(--f-mono); font-size:9px;
+    color:var(--signal);
+    text-transform:uppercase; letter-spacing:.18em;
+    margin-left:8px; padding: 1px 5px;
+    border:1px solid var(--signal-deep);
+  }
+  .tier.t2{ color:var(--bone-2); border-color:var(--rule); }
+  .tier.t3{ color:var(--bone-4); border-color:var(--rule-soft); }
+
+  /* Health detail popover */
+  .health-pop{
+    position:absolute; right: 32px; top: calc(var(--header) + 4px);
+    width: 320px;
+    background: var(--ink-2);
+    border:1px solid var(--rule);
+    padding: 14px 16px;
+    z-index:50;
+    box-shadow: 0 16px 40px rgba(0,0,0,.5);
+    display:none;
+  }
+  .health-pop.on{ display:block; }
+  .health-pop h5{
+    margin: 0 0 10px;
+    font-family:var(--f-mono); font-size:9.5px;
+    color:var(--bone-4); text-transform:uppercase; letter-spacing:.18em;
+    font-weight:500;
+  }
+  .health-pop ul{ list-style:none; padding:0; margin:0; }
+  .health-pop li{
+    display:grid; grid-template-columns: 12px 1fr auto; gap:10px;
+    padding: 7px 0;
+    border-bottom:1px solid var(--rule-soft);
+    font-size:12px; align-items:center;
+  }
+  .health-pop li:last-child{ border-bottom:0; }
+  .health-pop li .d{ width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 0 2px rgba(127,174,110,.18); }
+  .health-pop li.warn .d{ background:var(--warn); box-shadow:0 0 0 2px rgba(216,154,75,.18); }
+  .health-pop li b{ color:var(--bone); font-weight:500; }
+  .health-pop li .age{ font-family:var(--f-mono); font-size:10px; color:var(--bone-4); text-transform:uppercase; letter-spacing:.12em; }
+
+  /* responsive */
+  @media (max-width: 1100px){
+    :root{ --sidebar: 220px; }
+  }
+  @media (max-width: 880px){
+    .shell{ grid-template-columns: 1fr; }
+    .sidebar{ display:none; }
+    .inbox-grid{ grid-template-columns: 1fr; }
+    .rail{ display:none; }
+    .feed{ padding-left:0; }
+    .two-col{ grid-template-columns: 1fr; }
+    .stat-grid.cols-3, .stat-grid.cols-4{ grid-template-columns: 1fr 1fr; }
+    .qexpand-grid{ grid-template-columns: 1fr; }
+    .slideover{ width: 92%; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">Linkbook</div>
+      <div class="studio">Flight Design Co.</div>
+    </div>
+
+    <div class="nav-scroll" id="nav">
+
+      <div class="nav-item on" data-page="inbox">
+        <span>Inbox</span>
+        <span class="badge alert">7</span>
+      </div>
+
+      <div class="nav-section">Overview</div>
+      <div class="nav-item" data-page="cash">
+        <span>Cash</span>
+        <span class="badge">$104.8k</span>
+      </div>
+      <div class="nav-item" data-page="pipeline">
+        <span>Pipeline</span>
+        <span class="badge">9 signed</span>
+      </div>
+      <div class="nav-item" data-page="utilization">
+        <span>Utilization</span>
+        <span class="badge">68%</span>
+      </div>
+      <div class="nav-item" data-page="projects">
+        <span>Projects</span>
+        <span class="badge">9</span>
+      </div>
+      <div class="nav-item" data-page="clients">
+        <span>Clients</span>
+        <span class="badge">14</span>
+      </div>
+
+      <div class="nav-section">Queue</div>
+      <div class="nav-item" data-page="actions">
+        <span>Actions</span>
+        <span class="badge">6</span>
+      </div>
+
+      <div class="nav-section">Settings</div>
+      <div class="nav-item" data-page="integrations">
+        <span>Integrations</span>
+        <span class="badge">5/5</span>
+      </div>
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="av">N</div>
+      <div class="who">Neel</div>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+
+    <!-- ===== INBOX ===== -->
+    <section class="page-view active" id="page-inbox">
+      <div class="topbar">
+        <h1>Inbox<small>Tue 24 Apr · 7 unread of 24</small></h1>
+        <div class="topbar-right">
+          <span>llm $2.14</span>
+          <button class="health" id="healthBtn"><span class="dot"></span> 5 / 5 connected</button>
+        </div>
+      </div>
+
+      <div id="healthPop" class="health-pop">
+        <h5>Integration health · last sync</h5>
+        <ul>
+          <li><span class="d"></span><b>QuickBooks</b><span class="age">04:12</span></li>
+          <li><span class="d"></span><b>Harvest</b><span class="age">00:42</span></li>
+          <li><span class="d"></span><b>Dropbox Sign</b><span class="age">02:08</span></li>
+          <li class="warn"><span class="d"></span><b>Airtable</b><span class="age">18:30</span></li>
+          <li><span class="d"></span><b>Gmail</b><span class="age">00:18</span></li>
+        </ul>
+      </div>
+
+      <div class="page" style="padding-top:22px;">
+        <div class="filters">
+          <button class="pill on">All · 7</button>
+          <button class="pill">Money · 4</button>
+          <button class="pill">Projects · 2</button>
+          <button class="pill">Contracts · 1</button>
+          <span class="right">sorted by priority</span>
+        </div>
+
+        <div class="inbox-grid">
+
+          <!-- priority rail -->
+          <aside class="rail">
+            <div class="rail-bars" id="rail"></div>
+            <div class="rail-foot">↑ 7</div>
+          </aside>
+
+          <section class="feed">
+            <div class="events" id="events">
+
+              <!-- 1 -->
+              <article class="ev" data-ev="1">
+                <div class="score-wrap">
+                  <div class="score hot">94</div>
+                  <div class="why-pop">
+                    <h5>Why score 94?</h5>
+                    <div class="term"><span class="l">money · $18.4k</span><span class="v">+38</span></div>
+                    <div class="term"><span class="l">urgency · 62d</span><span class="v">+27</span></div>
+                    <div class="term"><span class="l">client tier A</span><span class="v">+18</span></div>
+                    <div class="term"><span class="l">neglect · 14d</span><span class="v">+11</span></div>
+                    <div class="total"><span>total</span><span>94 / 100</span></div>
+                  </div>
+                </div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src qbo">◆ QBO</span>
+                    <span>3 in thread</span>
+                    <span class="age">62 days overdue</span>
+                  </div>
+                  <div class="title">Stellate Studios · invoice <b>#INV‑1041</b> · $18,400.00</div>
+                  <div class="sub">Polite reminder sent <span class="num">14d</span> ago, no reply. Tier A · pays on avg <span class="num">28d</span>.</div>
+
+                  <div class="proposal">
+                    <div class="proposal-head">
+                      <span class="agent">Cash Chaser</span>
+                      <span>· firm reminder draft</span>
+                      <span class="conf">conf <span class="bar" style="--w:88%"></span> <span style="font-variant-numeric:tabular-nums; color:var(--bone)">0.88</span></span>
+                    </div>
+                    <div class="proposal-rationale">
+                      Polite reminder 14 days ago without response — escalating to firm tone with principal cc'd, per Stellate's prior pattern (firm reminder typically resolves in 5 days).
+                    </div>
+                    <div class="proposal-preview">
+                      <div class="from">
+                        <b>To</b><div class="v">mira@stellate.studio</div>
+                        <b>Cc</b><div class="v">accounting@flightdesign.co</div>
+                        <b>Subj</b><div class="v">Invoice INV‑1041 — second notice</div>
+                      </div>
+                      <div class="body">Hi Mira,
+
+We sent INV‑1041 ($18,400.00) on 21 Feb and a follow‑up on 14 Apr without a response. The invoice is now 62 days past due.
+
+Could you let me know whether this is in process, or if there's a question on our end? Happy to jump on a call if it'd help.
+
+Best,
+Neel</div>
+                    </div>
+                    <div class="proposal-foot">
+                      <button class="btn primary">Approve & Send</button>
+                      <button class="btn">Edit</button>
+                      <button class="btn ghost">Reject</button>
+                      <span class="safe">undo · 30s soft window <i>·</i> re‑checks invoice on send</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn tiny ghost">Snooze 7d</button>
+                  <button class="btn tiny ghost">In‑dispute</button>
+                </div>
+              </article>
+
+              <!-- 2 -->
+              <article class="ev" data-ev="2">
+                <div class="score-wrap">
+                  <div class="score hot">88</div>
+                  <div class="why-pop">
+                    <h5>Why score 88?</h5>
+                    <div class="term"><span class="l">money · $42k retainer</span><span class="v">+34</span></div>
+                    <div class="term"><span class="l">blocking · kickoff</span><span class="v">+28</span></div>
+                    <div class="term"><span class="l">urgency · 14m</span><span class="v">+20</span></div>
+                    <div class="term"><span class="l">tier B (new)</span><span class="v">+6</span></div>
+                    <div class="total"><span>total</span><span>88 / 100</span></div>
+                  </div>
+                </div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src dropboxsign">◆ DropboxSign</span>
+                    <span class="age">14 min ago</span>
+                  </div>
+                  <div class="title">Northbeam · master agreement <b>signed</b> · $42,000 · 6mo retainer</div>
+                  <div class="sub">Project Concierge proposes a 4‑step kickoff.</div>
+
+                  <div class="proposal">
+                    <div class="proposal-head">
+                      <span class="agent">Project Concierge</span>
+                      <span>· kickoff composite</span>
+                      <span class="conf">conf <span class="bar" style="--w:96%"></span> <span style="font-variant-numeric:tabular-nums; color:var(--bone)">0.96</span></span>
+                    </div>
+                    <div class="proposal-rationale">
+                      Counterparty matches existing client "Northbeam Inc." Drive template "Retainer · Brand Identity" applies based on contract title.
+                    </div>
+                    <div class="legs-preview">
+                      <ol>
+                        <li><div><b>Create Harvest project</b><span>"Northbeam — Brand System" · 240h budget</span></div><span class="where">harvest</span></li>
+                        <li><div><b>Insert Airtable row</b><span>Projects · status=Kickoff · owner=Neel</span></div><span class="where">airtable</span></li>
+                        <li><div><b>Create Drive folder</b><span>/clients/Northbeam/2026‑Q2‑Brand</span></div><span class="where">drive</span></li>
+                        <li><div><b>Draft welcome email</b><span>to mira@northbeam.com — preview only, not sent</span></div><span class="where">gmail</span></li>
+                      </ol>
+                    </div>
+                    <div class="proposal-foot">
+                      <button class="btn primary">Approve all 4</button>
+                      <button class="btn">Review legs</button>
+                      <button class="btn ghost">Skip</button>
+                      <span class="safe">all legs reversible <i>·</i> partial‑failure safe</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn tiny ghost">Open contract ↗</button>
+                </div>
+              </article>
+
+              <!-- 3 -->
+              <article class="ev" data-ev="3">
+                <div class="score-wrap">
+                  <div class="score">81</div>
+                </div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src harvest">◆ Harvest</span>
+                    <span class="age">queued · sending in 18s</span>
+                  </div>
+                  <div class="title">Brightside Goods · Harvest invoice <b>#H‑0427</b> · $8,250.00</div>
+                  <div class="sub">You approved sending at 09:13.</div>
+
+                  <div class="queued">
+                    <div class="ring" style="--p:60"><span id="ring-num">18</span></div>
+                    <div class="msg"><b>Sending in 18s</b> · once timer elapses, action becomes irreversible</div>
+                    <button class="undo">Undo</button>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="btn tiny ghost">Edit in Harvest ↗</button>
+                </div>
+              </article>
+
+              <!-- 4 -->
+              <article class="ev" data-ev="4">
+                <div class="score-wrap"><div class="score">76</div></div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src harvest">◆ Harvest</span>
+                    <span class="age">crossed 04:12</span>
+                  </div>
+                  <div class="title">Petal & Vine · "Spring Campaign" hit <b>100%</b> of budget · 132h / 132h</div>
+                  <div class="sub">Lead: Asha · burn last 7d: <span class="num">+18h</span> · last status <span class="num">9d ago</span>.</div>
+                </div>
+                <div class="actions">
+                  <button class="btn primary tiny">Draft scope email</button>
+                  <button class="btn tiny">Increase budget</button>
+                </div>
+              </article>
+
+              <!-- 5 -->
+              <article class="ev" data-ev="5">
+                <div class="score-wrap"><div class="score">68</div></div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src airtable">◆ Airtable</span>
+                    <span class="age">17 days silent</span>
+                  </div>
+                  <div class="title">Halford & Co. · "Annual Report 2026" no Airtable update for <b>17 days</b></div>
+                  <div class="sub">Lead: Marcus · <span class="num">82h</span> logged in that window — work is happening, status hasn't.</div>
+                </div>
+                <div class="actions">
+                  <button class="btn primary tiny">Ping Marcus</button>
+                  <button class="btn tiny">Mark paused</button>
+                </div>
+              </article>
+
+              <!-- 6 -->
+              <article class="ev" data-ev="6">
+                <div class="score-wrap"><div class="score">62</div></div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src qbo">◆ QBO</span>
+                    <span class="age">2h ago</span>
+                  </div>
+                  <div class="title">Wire of <b>$6,400.00</b> from "STELLATE STUDIOS LLC" — no invoice match</div>
+                  <div class="sub">Reconciler confidence 0.71 (under 0.85). Three open Stellate invoices; amount doesn't match exactly.</div>
+                </div>
+                <div class="actions">
+                  <button class="btn primary tiny">Apply manually</button>
+                  <button class="btn tiny">Open in QBO ↗</button>
+                </div>
+              </article>
+
+              <!-- 7 -->
+              <article class="ev" data-ev="7">
+                <div class="score-wrap"><div class="score cold">44</div></div>
+                <div class="body">
+                  <div class="meta-row">
+                    <span class="src harvest">◆ Harvest</span>
+                    <span class="age">yesterday</span>
+                  </div>
+                  <div class="title">You logged <b>2.5h</b> on Mon — &lt; 4h on a workday</div>
+                  <div class="sub">Time Sentinel suggests finishing your timesheet before Friday close.</div>
+                </div>
+                <div class="actions">
+                  <button class="btn primary tiny">Open Harvest ↗</button>
+                  <button class="btn tiny ghost">Snooze</button>
+                </div>
+              </article>
+
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CASH ===== -->
+    <section class="page-view" id="page-cash">
+      <div class="topbar">
+        <h1>Cash<small>April · cash basis</small></h1>
+        <div class="topbar-right"><span>last sync · qbo 04:12</span></div>
+      </div>
+      <div class="page">
+        <div class="page-head">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles">
+              <button class="on">Cash</button><button>Accrual</button>
+            </div>
+            <div class="toggles">
+              <button>MTD</button><button class="on">QTD</button><button>YTD</button>
+            </div>
+            <button class="btn">Export PDF</button>
+          </div>
+        </div>
+
+        <div class="stat-grid cols-3">
+          <div class="stat">
+            <div class="lbl">Outstanding A/R</div>
+            <div class="num signal">$104<small>,820</small></div>
+            <div class="delta neg">▴ $12.4k vs last month · 9 invoices</div>
+            <svg class="spark" viewBox="0 0 200 32" preserveAspectRatio="none">
+              <defs><linearGradient id="sparkfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E8B447"/><stop offset="1" stop-color="#E8B447" stop-opacity="0"/></linearGradient></defs>
+              <path class="spark-area" d="M0,22 L20,18 40,20 60,15 80,16 100,14 120,11 140,12 160,9 180,10 200,6 L200,32 0,32 Z"/>
+              <path class="spark-line" d="M0,22 L20,18 40,20 60,15 80,16 100,14 120,11 140,12 160,9 180,10 200,6"/>
+            </svg>
+          </div>
+          <div class="stat">
+            <div class="lbl">QTD Revenue</div>
+            <div class="num">$162<small>,400</small></div>
+            <div class="delta pos">▾ +18% vs Q1 · target $180k</div>
+          </div>
+          <div class="stat">
+            <div class="lbl">Avg time‑to‑payment</div>
+            <div class="num">34<small>&nbsp;days</small></div>
+            <div class="delta neg">▴ +6d vs 90d rolling</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="section-head">
+              <h3>A/R aging</h3>
+              <div class="meta">QBO · 04:12</div>
+            </div>
+            <div class="aging-buckets">
+              <div class="bucket"><div class="bar" style="height:38%"></div><div class="v">$32,400</div><div class="k">0–30d</div></div>
+              <div class="bucket b30"><div class="bar" style="height:54%"></div><div class="v">$28,800</div><div class="k">31–60</div></div>
+              <div class="bucket b60"><div class="bar" style="height:78%"></div><div class="v">$31,220</div><div class="k">61–90</div></div>
+              <div class="bucket b90"><div class="bar" style="height:34%"></div><div class="v">$12,400</div><div class="k">90+</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-head">
+              <h3>Top 5 outstanding</h3>
+              <div class="meta">click → invoice</div>
+            </div>
+            <div class="top-list">
+              <div class="row"><span class="rk">I</span><span class="who"><b>Stellate Studios</b><br/><span>INV‑1041 · 21 Feb</span></span><span class="age">62d</span><span class="amt">$18,400.00</span></div>
+              <div class="row"><span class="rk">II</span><span class="who"><b>Halford & Co.</b><br/><span>INV‑1029 · 14 Mar</span></span><span class="age">41d</span><span class="amt">$14,800.00</span></div>
+              <div class="row"><span class="rk">III</span><span class="who"><b>Petal & Vine</b><br/><span>INV‑1044 · 02 Apr</span></span><span class="age warn">22d</span><span class="amt">$11,250.00</span></div>
+              <div class="row"><span class="rk">IV</span><span class="who"><b>Ridgemoor Group</b><br/><span>INV‑1048 · 09 Apr</span></span><span class="age warn">15d</span><span class="amt">$9,800.00</span></div>
+              <div class="row"><span class="rk">V</span><span class="who"><b>Brightside Goods</b><br/><span>INV‑1050 · 12 Apr</span></span><span class="age warn">12d</span><span class="amt">$8,250.00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PIPELINE ===== -->
+    <section class="page-view" id="page-pipeline">
+      <div class="topbar">
+        <h1>Pipeline<small>last 90 days</small></h1>
+        <div class="topbar-right"><span>last sync · dropboxsign 02:08</span></div>
+      </div>
+      <div class="page">
+        <div class="page-head">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles"><button class="on">90d</button><button>QTD</button><button>YTD</button></div>
+          </div>
+        </div>
+
+        <div class="stat-grid cols-4">
+          <div class="stat"><div class="lbl">Sent</div><div class="num">14</div><div class="delta">$284,000 face value</div></div>
+          <div class="stat"><div class="lbl">Signed</div><div class="num signal">9</div><div class="delta pos">▾ 64% conversion</div></div>
+          <div class="stat"><div class="lbl">Declined</div><div class="num">3</div><div class="delta neg">scope · timeline · price</div></div>
+          <div class="stat"><div class="lbl">Expected revenue</div><div class="num">$186<small>,200</small></div><div class="delta">signed · not invoiced</div></div>
+        </div>
+
+        <div class="section-head">
+          <h3>Funnel</h3>
+          <div class="meta">DropboxSign · 02:08</div>
+        </div>
+        <div class="funnel">
+          <div class="funnel-row"><span class="stage">Sent</span><span class="bar-wrap" style="--w:100%"></span><span class="n">14</span><span class="v">$284,000</span></div>
+          <div class="funnel-row"><span class="stage">Viewed</span><span class="bar-wrap" style="--w:86%"></span><span class="n">12</span><span class="v">$248,000</span></div>
+          <div class="funnel-row"><span class="stage">Signed</span><span class="bar-wrap" style="--w:64%"></span><span class="n">9</span><span class="v">$186,200</span></div>
+          <div class="funnel-row"><span class="stage">Invoiced</span><span class="bar-wrap" style="--w:43%"></span><span class="n">6</span><span class="v">$118,400</span></div>
+          <div class="funnel-row"><span class="stage">Paid</span><span class="bar-wrap" style="--w:21%"></span><span class="n">3</span><span class="v">$58,200</span></div>
+        </div>
+
+        <div class="section-head">
+          <h3>Open contracts</h3>
+          <div class="meta">3 sent · awaiting signature</div>
+        </div>
+        <div class="top-list">
+          <div class="row"><span class="rk">·</span><span class="who"><b>Northbeam Inc.</b><br/><span>MSA · sent 14 Apr</span></span><span class="age ok">SIGNED</span><span class="amt">$42,000</span></div>
+          <div class="row"><span class="rk">·</span><span class="who"><b>Cypress Labs</b><br/><span>SOW v2 · sent 18 Apr</span></span><span class="age warn">viewed 6d</span><span class="amt">$18,500</span></div>
+          <div class="row"><span class="rk">·</span><span class="who"><b>Meadowlark Co.</b><br/><span>retainer · sent 19 Apr</span></span><span class="age warn">5d unsigned</span><span class="amt">$36,000</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== UTILIZATION ===== -->
+    <section class="page-view" id="page-utilization">
+      <div class="topbar">
+        <h1>Utilization<small>14‑day window</small></h1>
+        <div class="topbar-right"><span>last sync · harvest 00:42</span></div>
+      </div>
+      <div class="page">
+        <div class="page-head">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles"><button>Week</button><button class="on">14d</button><button>Month</button></div>
+          </div>
+        </div>
+
+        <div class="stat-grid cols-3">
+          <div class="stat"><div class="lbl">Billable %</div><div class="num signal">68<small>%</small></div><div class="delta">target 70%</div></div>
+          <div class="stat"><div class="lbl">Logged hours</div><div class="num">412<small>h</small></div><div class="delta">across 5 people</div></div>
+          <div class="stat"><div class="lbl">Retainer cap usage</div><div class="num">82<small>%</small></div><div class="delta neg">▴ 2 clients near cap</div></div>
+        </div>
+
+        <div class="section-head">
+          <h3>Capacity heatmap</h3>
+          <div class="meta">cell = billable hours per day</div>
+        </div>
+        <div class="heat" id="heat"></div>
+        <div class="heat-legend">
+          <span>scale</span>
+          <div class="scale">
+            <div style="background:var(--ink-2)"></div>
+            <div style="background:rgba(232,180,71,.15)"></div>
+            <div style="background:rgba(232,180,71,.35)"></div>
+            <div style="background:rgba(232,180,71,.55)"></div>
+            <div style="background:rgba(232,180,71,.85)"></div>
+            <div style="background:var(--signal)"></div>
+          </div>
+          <span>0h <span style="margin:0 60px;"></span> 9h+</span>
+          <span style="margin-left:auto;"><span style="display:inline-block; width:10px; height:10px; background:repeating-linear-gradient(45deg, var(--ink-2), var(--ink-2) 3px, transparent 3px, transparent 6px); border:1px solid var(--rule-soft); vertical-align:middle; margin-right:6px;"></span> off / weekend</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROJECTS ===== -->
+    <section class="page-view" id="page-projects">
+      <div class="topbar">
+        <h1>Projects<small>9 active · health</small></h1>
+        <div class="topbar-right"><span>last sync · airtable 18m ago</span></div>
+      </div>
+      <div class="page">
+        <div class="page-head">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles"><button class="on">All 9</button><button>Red 2</button><button>Amber 3</button><button>Green 4</button></div>
+          </div>
+        </div>
+
+        <table class="tbl">
+          <thead>
+            <tr><th>Status</th><th>Project / client</th><th>Budget</th><th>Hours / wk</th><th>Last status</th><th>Milestone</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="ph-status"><span class="ph-dot red"></span>Red</span></td><td class="name"><b>Petal &amp; Vine — Spring Campaign</b><span>Asha · retainer</span></td><td><span class="nu">132 / 132h</span><div class="budget-bar"><i class="over" style="width:100%"></i></div></td><td class="nu">+18h ▴</td><td class="nu" style="color:var(--bad);">9d ago</td><td class="nu">"Final review" overdue 2d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot red"></span>Red</span></td><td class="name"><b>Halford — Annual Report 2026</b><span>Marcus · fixed</span></td><td><span class="nu">98 / 120h</span><div class="budget-bar"><i style="width:81%"></i></div></td><td class="nu">42h ▴</td><td class="nu" style="color:var(--bad);">17d silent</td><td class="nu">"Print proof" due in 6d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot amber"></span>Amber</span></td><td class="name"><b>Ridgemoor — Site Redesign</b><span>Asha · fixed</span></td><td><span class="nu">186 / 240h</span><div class="budget-bar"><i style="width:78%"></i></div></td><td class="nu">28h</td><td class="nu">3d ago</td><td class="nu">"Visual QA" due in 4d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot amber"></span>Amber</span></td><td class="name"><b>Cypress Labs — Brand Refresh</b><span>Neel · retainer</span></td><td><span class="nu">62 / 120h</span><div class="budget-bar"><i style="width:52%"></i></div></td><td class="nu">14h</td><td class="nu">5d ago</td><td class="nu">"Concept lock" due in 9d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot amber"></span>Amber</span></td><td class="name"><b>Brightside — Packaging</b><span>Marcus · fixed</span></td><td><span class="nu">44 / 60h</span><div class="budget-bar"><i style="width:73%"></i></div></td><td class="nu">8h</td><td class="nu">today</td><td class="nu">"Vendor handoff" due in 11d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot green"></span>Green</span></td><td class="name"><b>Northbeam — Brand System</b><span>Neel · retainer · new</span></td><td><span class="nu">0 / 240h</span><div class="budget-bar"><i style="width:0%"></i></div></td><td class="nu">—</td><td class="nu">today</td><td class="nu">kickoff</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot green"></span>Green</span></td><td class="name"><b>Stellate — Q2 Editorial</b><span>Asha · retainer</span></td><td><span class="nu">88 / 200h</span><div class="budget-bar"><i style="width:44%"></i></div></td><td class="nu">22h</td><td class="nu">2d ago</td><td class="nu">"Issue 04 layout" 12d</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot green"></span>Green</span></td><td class="name"><b>Meadowlark — Wayfinding</b><span>Marcus · fixed</span></td><td><span class="nu">12 / 80h</span><div class="budget-bar"><i style="width:15%"></i></div></td><td class="nu">6h</td><td class="nu">today</td><td class="nu">"Site survey" complete</td><td><button class="btn tiny">Open</button></td></tr>
+            <tr><td><span class="ph-status"><span class="ph-dot green"></span>Green</span></td><td class="name"><b>Linkwell — Web Type</b><span>Neel · fixed</span></td><td><span class="nu">156 / 200h</span><div class="budget-bar"><i style="width:78%"></i></div></td><td class="nu">18h</td><td class="nu">4d ago</td><td class="nu">"Spec freeze" 21d</td><td><button class="btn tiny">Open</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== CLIENTS ===== -->
+    <section class="page-view" id="page-clients">
+      <div class="topbar">
+        <h1>Clients<small>14 total · lifetime &amp; margin</small></h1>
+      </div>
+      <div class="page">
+        <div class="page-head">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles"><button class="on">All</button><button>Tier A · 4</button><button>Tier B · 6</button><button>Tier C · 4</button></div>
+          </div>
+        </div>
+
+        <table class="tbl">
+          <thead>
+            <tr><th>Client</th><th style="text-align:right;">Lifetime $</th><th style="text-align:right;">Hours</th><th style="text-align:right;">Margin</th><th style="text-align:right;">Last engagement</th><th style="text-align:right;">Open A/R</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name"><b>Stellate Studios</b><span class="tier">tier A</span></td><td style="text-align:right;" class="nu" >$284,400</td><td style="text-align:right;" class="nu">2,140h</td><td style="text-align:right;" class="nu pos">62%</td><td style="text-align:right;">today</td><td style="text-align:right;" class="nu neg">$32,800</td></tr>
+            <tr><td class="name"><b>Halford & Co.</b><span class="tier">tier A</span></td><td style="text-align:right;" class="nu">$218,000</td><td style="text-align:right;" class="nu">1,780h</td><td style="text-align:right;" class="nu pos">58%</td><td style="text-align:right;">17d ago</td><td style="text-align:right;" class="nu neg">$14,800</td></tr>
+            <tr><td class="name"><b>Petal & Vine</b><span class="tier">tier A</span></td><td style="text-align:right;" class="nu">$162,400</td><td style="text-align:right;" class="nu">1,210h</td><td style="text-align:right;" class="nu pos">54%</td><td style="text-align:right;">today</td><td style="text-align:right;" class="nu neg">$11,250</td></tr>
+            <tr><td class="name"><b>Ridgemoor Group</b><span class="tier">tier A</span></td><td style="text-align:right;" class="nu">$148,200</td><td style="text-align:right;" class="nu">980h</td><td style="text-align:right;" class="nu pos">61%</td><td style="text-align:right;">3d ago</td><td style="text-align:right;" class="nu neg">$9,800</td></tr>
+            <tr><td class="name"><b>Cypress Labs</b><span class="tier t2">tier B</span></td><td style="text-align:right;" class="nu">$96,800</td><td style="text-align:right;" class="nu">740h</td><td style="text-align:right;" class="nu pos">52%</td><td style="text-align:right;">5d ago</td><td style="text-align:right;">—</td></tr>
+            <tr><td class="name"><b>Brightside Goods</b><span class="tier t2">tier B</span></td><td style="text-align:right;" class="nu">$84,200</td><td style="text-align:right;" class="nu">620h</td><td style="text-align:right;" class="nu pos">49%</td><td style="text-align:right;">today</td><td style="text-align:right;" class="nu neg">$8,250</td></tr>
+            <tr><td class="name"><b>Northbeam Inc.</b><span class="tier t2">tier B</span></td><td style="text-align:right;" class="nu">$0</td><td style="text-align:right;" class="nu">0h</td><td style="text-align:right;">—</td><td style="text-align:right;">today (new)</td><td style="text-align:right;">—</td></tr>
+            <tr><td class="name"><b>Meadowlark Co.</b><span class="tier t2">tier B</span></td><td style="text-align:right;" class="nu">$42,800</td><td style="text-align:right;" class="nu">340h</td><td style="text-align:right;" class="nu pos">46%</td><td style="text-align:right;">today</td><td style="text-align:right;">—</td></tr>
+            <tr><td class="name"><b>Linkwell</b><span class="tier t2">tier B</span></td><td style="text-align:right;" class="nu">$58,200</td><td style="text-align:right;" class="nu">450h</td><td style="text-align:right;" class="nu pos">51%</td><td style="text-align:right;">4d ago</td><td style="text-align:right;">—</td></tr>
+            <tr><td class="name"><b>Hill & Houseman</b><span class="tier t3">tier C</span></td><td style="text-align:right;" class="nu">$24,400</td><td style="text-align:right;" class="nu">180h</td><td style="text-align:right;" class="nu neg">38%</td><td style="text-align:right;">94d ago</td><td style="text-align:right;">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== ACTIONS ===== -->
+    <section class="page-view" id="page-actions">
+      <div class="topbar">
+        <h1>Actions<small>queue · drafted by agents and humans</small></h1>
+      </div>
+      <div class="page">
+        <div class="queue-stats">
+          <div class="queue-stat"><div class="lbl">Awaiting approval</div><div class="num signal">6</div></div>
+          <div class="queue-stat"><div class="lbl">In flight</div><div class="num">1</div></div>
+          <div class="queue-stat"><div class="lbl">Failed today</div><div class="num">2</div></div>
+          <div class="queue-stat"><div class="lbl">Done today</div><div class="num">14</div></div>
+        </div>
+
+        <div class="page-head" style="border:0; padding:0; margin: 4px 0 16px;">
+          <div></div>
+          <div class="page-actions">
+            <div class="toggles">
+              <button class="on">Open</button><button>Failed</button><button>Done</button><button>All</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="queue-list">
+
+          <!-- expanded row -->
+          <div class="qrow proposed expanded">
+            <div class="stripe"></div>
+            <div class="state">Proposed</div>
+            <div class="head">Stellate · INV‑<span class="num">1041</span> · firm reminder<span>invoice.remind · cash chaser</span></div>
+            <div class="when">2m ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand">
+            <div class="qexpand-grid">
+              <div>
+                <div class="preview-doc">
+                  <div class="from">
+                    <b>To</b><div class="v">mira@stellate.studio</div>
+                    <b>Cc</b><div class="v">accounting@flightdesign.co</div>
+                    <b>Subj</b><div class="v">Invoice INV‑1041 — second notice</div>
+                  </div>
+                  <p>Hi Mira,</p>
+                  <p>We sent INV‑1041 ($18,400.00) on 21 Feb and a follow‑up on 14 Apr without a response. The invoice is now <b>62 days past due</b>.</p>
+                  <p>Could you let me know whether this is in process, or if there's a question on our end? Happy to jump on a call if it'd help — I'm free Wednesday and Thursday afternoon.</p>
+                  <p>Thanks,</p>
+                  <div class="sig">Neel<br/>Flight Design Co.</div>
+                </div>
+                <div class="preview-foot">
+                  <button class="btn primary">Approve & Send</button>
+                  <button class="btn">Edit</button>
+                  <button class="btn ghost">Reject</button>
+                  <span class="safe">undo · 30s soft <i>·</i> re‑checks invoice on send</span>
+                </div>
+              </div>
+
+              <div class="qside">
+                <div class="qpanel">
+                  <div class="qpanel-head"><span>Composite legs</span><span>1 / 1</span></div>
+                  <div class="qpanel-body">
+                    <ul class="legs">
+                      <li><span class="check"></span><div><b>send via Gmail</b><span>queued_30s after approval — Undo cancels before send</span></div><span class="where">gmail</span></li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="qpanel">
+                  <div class="qpanel-head"><span>This subject · audit</span><span>13mo retention</span></div>
+                  <div class="qpanel-body">
+                    <ul class="audit">
+                      <li><div class="when">2m ago</div><div><b>Cash Chaser</b> drafted proposal. <em>Awaiting approval.</em></div></li>
+                      <li><div class="when">14 Apr</div><div><b>You</b> sent polite reminder. <em>200 OK from Gmail.</em></div></li>
+                      <li><div class="when">22 Mar</div><div><b>System</b> emitted <code>invoice.aging_30</code></div></li>
+                      <li><div class="when">21 Feb</div><div><b>You</b> sent invoice via Harvest. <em>Propagated to QBO.</em></div></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="qrow proposed">
+            <div class="stripe"></div>
+            <div class="state">Proposed</div>
+            <div class="head">Northbeam · MSA signed · 4‑leg kickoff<span>project.kickoff · concierge</span></div>
+            <div class="when">14m ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow queued">
+            <div class="stripe"></div>
+            <div class="state">Queued · 18s</div>
+            <div class="head">Brightside · H‑<span class="num">0427</span> · $8,250.00<span>invoice.send · queued_30s</span></div>
+            <div class="when">18s</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow proposed">
+            <div class="stripe"></div>
+            <div class="state">Proposed</div>
+            <div class="head">Petal &amp; Vine · scope‑creep email<span>email.send_draft · cash chaser</span></div>
+            <div class="when">42m ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow failed">
+            <div class="stripe"></div>
+            <div class="state">Failed</div>
+            <div class="head">Halford · contract reminder<span>contract.send_reminder · 401 dropboxsign</span></div>
+            <div class="when">1h ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow proposed">
+            <div class="stripe"></div>
+            <div class="state">Proposed</div>
+            <div class="head">Ridgemoor · apply $4,200.00 → INV‑<span class="num">1037</span><span>payment.apply · reconciler</span></div>
+            <div class="when">2h ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow done">
+            <div class="stripe"></div>
+            <div class="state">Done</div>
+            <div class="head">Time Sentinel self‑nudge<span>time.self_nudge · slack DM</span></div>
+            <div class="when">8h ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+
+          <div class="qrow done">
+            <div class="stripe"></div>
+            <div class="state">Done</div>
+            <div class="head">Halford · INV‑<span class="num">1029</span> · polite reminder sent<span>invoice.remind · cash chaser</span></div>
+            <div class="when">23h ago</div>
+            <div class="chev">›</div>
+          </div>
+          <div class="qexpand"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTEGRATIONS ===== -->
+    <section class="page-view" id="page-integrations">
+      <div class="topbar">
+        <h1>Integrations<small>5 connected · sources of truth</small></h1>
+      </div>
+      <div class="page">
+        <table class="tbl">
+          <thead><tr><th>Source</th><th>Status</th><th>Last sync</th><th>Mode</th><th>Volume / 24h</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="name"><b>QuickBooks Online</b><span>realm · Flight Design Co.</span></td><td><span class="ph-status"><span class="ph-dot green"></span>Healthy</span></td><td class="nu">04:12</td><td class="nu">CDC poll · 5m</td><td class="nu">412 reads · 4 writes</td><td><button class="btn tiny">Manage</button></td></tr>
+            <tr><td class="name"><b>Harvest</b><span>account · flightdesign</span></td><td><span class="ph-status"><span class="ph-dot green"></span>Healthy</span></td><td class="nu">00:42</td><td class="nu">Webhook + 30m poll</td><td class="nu">189 reads · 2 writes</td><td><button class="btn tiny">Manage</button></td></tr>
+            <tr><td class="name"><b>Dropbox Sign</b><span>team · neel@flightdesign.co</span></td><td><span class="ph-status"><span class="ph-dot green"></span>Healthy</span></td><td class="nu">02:08</td><td class="nu">Webhook</td><td class="nu">14 events · 0 writes</td><td><button class="btn tiny">Manage</button></td></tr>
+            <tr><td class="name"><b>Airtable</b><span>base · "Studio Ops"</span></td><td><span class="ph-status"><span class="ph-dot amber"></span>Slow</span></td><td class="nu" style="color:var(--warn);">18:30</td><td class="nu">Webhook</td><td class="nu">62 reads · 1 write</td><td><button class="btn tiny">Manage</button></td></tr>
+            <tr><td class="name"><b>Gmail</b><span>scope · known clients + Linkbook/* labels</span></td><td><span class="ph-status"><span class="ph-dot green"></span>Healthy</span></td><td class="nu">00:18</td><td class="nu">Pub/Sub watch</td><td class="nu">38 threads · 0 writes</td><td><button class="btn tiny">Manage</button></td></tr>
+          </tbody>
+        </table>
+
+        <div class="section-head"><h3>Harvest → QuickBooks sync</h3><div class="meta">critical dependency · §4.1</div></div>
+        <div style="background:var(--ink-1); border:1px solid var(--rule); padding: 18px 22px; display:grid; grid-template-columns: 1fr auto; gap:16px; align-items:center;">
+          <div>
+            <div style="font-size:13px; color:var(--bone-2);">Last verified <b style="color:var(--bone)">2026‑04‑18</b> · probe sent a $0 test invoice from Harvest and observed it in QBO within <b style="color:var(--bone)">3m 41s</b>.</div>
+            <div style="margin-top:6px; font-family:var(--f-mono); font-size:10.5px; color:var(--bone-4); text-transform:uppercase; letter-spacing:.16em;">no unpropagated invoices in the last 30 days</div>
+          </div>
+          <button class="btn">Re‑run probe</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Slide-over for inbox detail -->
+<div class="scrim" id="scrim"></div>
+<aside class="slideover" id="slideover">
+  <div class="slideover-head">
+    <div>
+      <div class="crumbs"><span>QuickBooks</span><span>Invoice</span><span>INV‑1041</span></div>
+      <h3>Stellate Studios</h3>
+      <div style="font-family:var(--f-mono); font-size:10px; color:var(--bone-3); text-transform:uppercase; letter-spacing:.16em; margin-top:4px;">Tier A · retainer · since 2023</div>
+    </div>
+    <button class="x" id="closeSlide">×</button>
+  </div>
+  <div class="slideover-body">
+    <div class="ledger">
+      <div class="row"><span class="k">Amount</span><span class="v">$18,400.00</span></div>
+      <div class="row"><span class="k">Issued</span><span class="v">21 Feb 2026</span></div>
+      <div class="row"><span class="k">Due</span><span class="v">22 Feb 2026</span></div>
+      <div class="row"><span class="k">Days overdue</span><span class="v"><span class="neg">62</span></span></div>
+      <div class="row"><span class="k">Last reminder</span><span class="v">14 Apr · polite</span></div>
+      <div class="row"><span class="k">Client avg pay time</span><span class="v">28d</span></div>
+      <div class="row"><span class="k">Outstanding total</span><span class="v">$32,800.00</span></div>
+    </div>
+
+    <div class="timeline">
+      <h4>Thread · 4 events</h4>
+      <div class="tl">
+        <div class="ev2"><div class="when">Today</div><div class="what"><b>Aged to 60d.</b> Cash Chaser drafted firm reminder. <em>Awaiting your approval.</em></div></div>
+        <div class="ev2"><div class="when">14 Apr</div><div class="what"><b>Polite reminder sent</b> by you. <em>No reply.</em></div></div>
+        <div class="ev2"><div class="when">22 Mar</div><div class="what"><b>Aged to 30d.</b> Suggested action: send polite reminder.</div></div>
+        <div class="ev2"><div class="when">21 Feb</div><div class="what"><b>Invoice issued.</b> via Harvest, propagated to QBO 4 min later.</div></div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<script>
+  // sidebar nav
+  const nav = document.getElementById('nav');
+  nav.addEventListener('click', e=>{
+    const it = e.target.closest('.nav-item[data-page]'); if(!it) return;
+    nav.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('on'));
+    it.classList.add('on');
+    document.querySelectorAll('.page-view').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+it.dataset.page).classList.add('active');
+    window.scrollTo({top:0});
+  });
+
+  // priority rail
+  const rail = document.getElementById('rail');
+  const railScores = [94,88,81,76,68,62,44, 41,38,36,33,32,30,28,26,24,22,20,18,16,14,12,10,8];
+  rail.innerHTML = railScores.map((s,i)=>{
+    const active = i < 7;
+    const dim = i >= 7;
+    return `<div class="rail-bar ${active?'active':''} ${dim?'dim':''}" title="event #${i+1} · score ${s}">
+      <span class="num">${s}</span>
+      <span class="fill" style="width:${s}%; height:5px;"></span>
+    </div>`;
+  }).join('');
+
+  // countdown ring
+  let secs = 18;
+  const ring = document.querySelector('.queued .ring');
+  const ringNum = document.getElementById('ring-num');
+  if(ring){
+    setInterval(()=>{
+      secs = (secs - 1 + 30) % 30;
+      ring.style.setProperty('--p', Math.round((secs/30) * 100));
+      ringNum.textContent = secs;
+    }, 1000);
+  }
+
+  // event row → slideover (title click only, not button click)
+  const slideover = document.getElementById('slideover');
+  const scrim = document.getElementById('scrim');
+  document.querySelectorAll('.ev .title, .ev .sub').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      slideover.classList.add('open');
+      scrim.classList.add('on');
+    });
+  });
+  document.getElementById('closeSlide').addEventListener('click', closeSlide);
+  scrim.addEventListener('click', closeSlide);
+  function closeSlide(){
+    slideover.classList.remove('open');
+    scrim.classList.remove('on');
+  }
+
+  // health popover
+  const healthBtn = document.getElementById('healthBtn');
+  const healthPop = document.getElementById('healthPop');
+  if(healthBtn){
+    healthBtn.addEventListener('click', e=>{
+      e.stopPropagation();
+      healthPop.classList.toggle('on');
+    });
+    document.addEventListener('click', ()=>healthPop.classList.remove('on'));
+    healthPop.addEventListener('click', e=>e.stopPropagation());
+  }
+
+  // heatmap
+  const people = ['Neel B.','Asha P.','Marcus L.','Rohan T.','Wren H.'];
+  const days = ['M','T','W','T','F','S','S','M','T','W','T','F','S','S'];
+  const heat = document.getElementById('heat');
+  if(heat){
+    let html = `<div></div>` + days.map(d=>`<div class="col-h">${d}</div>`).join('');
+    const data = [
+      [4,5,4,5,3,-1,-1, 5,4,5,4,4,-1,-1],
+      [3,4,5,3,4,-1,-1, 4,5,4,5,3,-1,-1],
+      [5,4,3,4,2,-1,-1, 3,3,4,5,5,-1,-1],
+      [2,3,2,3,1,-1,-1, 2,3,3,2,4,-1,-1],
+      [4,3,4,2,5,-1,-1, 4,4,3,3,2,-1,-1],
+    ];
+    people.forEach((p,i)=>{
+      html += `<div class="row-h">${p}</div>`;
+      data[i].forEach(v=>{ html += `<div class="cell" data-v="${v}" title="${p} · ${v<0?'off':v+'h'}"></div>`; });
+    });
+    heat.innerHTML = html;
+  }
+
+  // queue rows expand
+  document.querySelectorAll('.qrow').forEach(r=>{
+    r.addEventListener('click', ()=>{
+      // close other expansions
+      document.querySelectorAll('.qrow').forEach(x=>{ if(x!==r) x.classList.remove('expanded'); });
+      r.classList.toggle('expanded');
+    });
+  });
+
+  // ev expand to show proposal (already inline). Still allow click on score-wrap area to keep selection state
+  document.querySelectorAll('.ev').forEach(ev=>{
+    ev.addEventListener('mouseenter', ()=>{
+      // no-op visual; selection happens via slide-over
+    });
+  });
+</script>
+</body>
+</html>
