@@ -24,6 +24,12 @@ dev = [
     "ruff>=0.8",
 ]
 
+[project.scripts]
+# `linkbook` runs the API on 127.0.0.1:3000 (override via PORT/HOST env)
+linkbook = "linkbook.__main__:main"
+linkbook-migrate = "linkbook.db.migrate:main"
+linkbook-seed = "linkbook.seed:_run_main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

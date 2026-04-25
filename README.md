@@ -4,6 +4,23 @@ An AI-native operations layer for 1–10 person creative studios. Sits on top of
 
 The full product spec is in [`flight-os-spec.md`](./flight-os-spec.md). This README covers how to run it.
 
+## TL;DR
+
+```bash
+# one-time
+cd apps/api_py
+uv venv --python 3.14 && uv pip install -e ".[dev]"
+cp .env.example .env
+.venv/bin/linkbook-migrate
+.venv/bin/linkbook-seed
+
+# every time
+.venv/bin/linkbook                 # API   → http://127.0.0.1:3000
+cd ../web && pnpm install && pnpm dev   # Web → http://127.0.0.1:5173
+```
+
+Open http://127.0.0.1:5173.
+
 ## Status
 
 **v1, mocked integrations.** The full system runs end-to-end against in-process mocks of the five integrations.
@@ -76,28 +93,38 @@ uv pip install -e ".[dev]"
 cp .env.example .env
 
 # 3. apply schema + seed
-.venv/bin/python -m linkbook.db.migrate
-.venv/bin/python -m linkbook.seed
+.venv/bin/linkbook-migrate
+.venv/bin/linkbook-seed
 ```
 
 The seed creates 14 clients across 3 tiers, 9 active projects, 22 invoices spanning A/R aging buckets, time entries for the last 14 days, and the seven Inbox events from the UI sketch. It exercises every agent (Cash Chaser drafts a firm reminder, Project Concierge drafts a 4-leg kickoff, Time Sentinel drafts a self-nudge, Reconciler stays manual at low confidence per §5.3).
 
 `pydantic-settings` reads `.env` automatically from `apps/api_py/`. Override any value by exporting it in your shell or editing `.env` directly.
 
+### Console scripts
+
+`uv pip install -e .` registers three commands under `.venv/bin/`:
+
+| Command | What it does |
+|---|---|
+| `linkbook` | Boot the API on `127.0.0.1:3000` (`PORT`/`HOST` env vars override) |
+| `linkbook-migrate` | Apply schema to `DATABASE_URL` |
+| `linkbook-seed` | Idempotent seed (clients, projects, invoices, time entries, 7 inbox events) |
+
 ## Running locally
 
 ```bash
-# Terminal 1 — API on :3000
+# Terminal 1 — API on 127.0.0.1:3000 (defaults baked in)
 cd apps/api_py
-.venv/bin/uvicorn linkbook.app:app --port 3000 --host 127.0.0.1 --reload
+.venv/bin/linkbook
 
-# Terminal 2 — Web on :5173
+# Terminal 2 — Web on 127.0.0.1:5173
 cd apps/web
 pnpm install
 pnpm dev
 ```
 
-Then open http://127.0.0.1:5173. The Vite dev server proxies `/inbox`, `/actions`, `/dashboard/*`, `/integrations`, `/dev/*`, `/webhooks/*`, `/healthz` to `:3000`.
+Then open http://127.0.0.1:5173. Both servers are locked to `127.0.0.1` so the Vite proxy can reach the API without IPv6 trouble. The proxy forwards `/inbox`, `/actions`, `/dashboard/*`, `/integrations`, `/dev/*`, `/webhooks/*`, `/healthz` to the API. Override with `PORT`, `HOST`, or `API_URL` (Vite) if you need a different binding.
 
 ## Tests
 
@@ -146,7 +173,7 @@ Connection list, source health, "Run probe" for the Harvest→QBO sync watchdog 
 
 ## Environment variables
 
-See [`.env.example`](./.env.example) for the canonical list. Key ones:
+See [`apps/api_py/.env.example`](./apps/api_py/.env.example) for the canonical list (this is the file `pydantic-settings` reads). Key ones:
 
 | Variable | Default | Notes |
 |---|---|---|
@@ -203,7 +230,8 @@ rm -rf .venv linkbook.db
 uv venv --python 3.14
 uv pip install -e ".[dev]"
 cp .env.example .env
-.venv/bin/python -m linkbook.db.migrate
-.venv/bin/python -m linkbook.seed
+.venv/bin/linkbook-migrate
+.venv/bin/linkbook-seed
 .venv/bin/pytest -q  # 29 passing
+.venv/bin/linkbook  # API on http://127.0.0.1:3000
 ```

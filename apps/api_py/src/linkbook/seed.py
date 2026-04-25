@@ -374,5 +374,10 @@ async def main() -> int:
         db.close()
 
 
-if __name__ == "__main__":
+def _run_main() -> None:
+    """Sync entry point for the `linkbook-seed` console script."""
     sys.exit(asyncio.run(main()))
+
+
+if __name__ == "__main__":
+    _run_main()
