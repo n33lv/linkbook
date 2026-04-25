@@ -20,7 +20,7 @@ from .queue import cancel_send_delay
 
 @dataclass
 class UndoOk:
-    method: Literal["cancel_queued", "true_undo", "compensating"]
+    method: Literal["unqueued", "true_undo", "compensating"]
     ok: Literal[True] = True
 
 
@@ -41,11 +41,11 @@ async def undo_action(
     if a is None:
         return UndoFail(reason="not_found", detail="action not found")
 
-    # 1. queued_30s → cancel timer.
+    # 1. queued_30s → return to drafted (§2.5 soft-undo).
     if a.status == "queued_30s":
-        cancelled = await cancel_send_delay(db, action_id)
-        if cancelled:
-            return UndoOk(method="cancel_queued")
+        unqueued = await cancel_send_delay(db, action_id)
+        if unqueued:
+            return UndoOk(method="unqueued")
 
     if a.status != "succeeded":
         return UndoFail(reason="past_window", detail=f"cannot undo from status {a.status}")

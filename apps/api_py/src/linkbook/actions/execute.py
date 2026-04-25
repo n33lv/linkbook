@@ -200,6 +200,44 @@ async def execute_action(
     try:
         undo_token: str | None = None
         trace = DispatchTrace(request=None, response=None, http_status=None)
+
+        # §5.3 — agent-driven dispatch when the toggle is on AND the SDK
+        # / Anthropic key / Agentspan server is available. Lazy-falls
+        # through to the manual dispatcher per-action.
+        if cfg.USE_AGENT_DISPATCH and action.type not in (
+            "task.create",
+            "event.snooze",
+            "event.dismiss",
+            "event.mark_done",
+            "project.mark_complete",
+        ):
+            handled = await _try_dispatch_via_agents(cfg, db, log, action)
+            if handled is not None:
+                trace = handled
+                # Pick the same undo_token policy as the manual paths
+                # would have. Keeps the audit trail comparable.
+                undo_token = _undo_token_for(action)
+                _set_action_status(db, action.id, "succeeded", undo_token=undo_token)
+                _write_audit(
+                    db,
+                    actor=f"agent:orchestrator@v1.0",
+                    action_id=action.id,
+                    originating_event_id=action.originating_event_id,
+                    kind="action.succeeded",
+                    idempotency_key=action.idempotency_key,
+                    subject_ref=action.subject_ref,
+                    request=trace.request if isinstance(trace.request, dict) else None,
+                    response=_redact(trace.response) if trace.response is not None else None,
+                    http_status=str(trace.http_status)
+                    if trace.http_status is not None
+                    else None,
+                )
+                if action.originating_event_id and action.type in SOURCE_MUTATING:
+                    _auto_resolve_events_for_subject(
+                        db, action.subject_ref, f"action {action.type} succeeded (agent)"
+                    )
+                return ExecuteSucceeded(undo_token=undo_token)
+
         t = action.type
         if t == "invoice.remind":
             trace = await _dispatch_invoice_remind(cfg, db, action)
@@ -575,3 +613,82 @@ async def _reverify_invoice_still_overdue(
 async def _yield() -> None:
     """Test seam — lets the event loop drain."""
     await asyncio.sleep(0)
+
+
+# ----------------------------------------------------------------------
+# §5.3 — agent-driven dispatch (USE_AGENT_DISPATCH=true)
+# ----------------------------------------------------------------------
+
+
+_UNDO_TOKEN_BY_TYPE = {
+    "invoice.remind": "compensating",
+    "invoice.mark_paid_manual": "compensating",
+    "payment.apply": "compensating",
+    "project.kickoff": "true_undo",
+    "project.update_status": "true_undo",
+    "time.log_entry": "true_undo",
+}
+
+
+def _undo_token_for(action: Action) -> str | None:
+    """Same undo_token policy the manual paths use, for parity in audits."""
+    pfx = _UNDO_TOKEN_BY_TYPE.get(action.type)
+    return f"{pfx}:{action.id}" if pfx else None
+
+
+async def _try_dispatch_via_agents(
+    cfg: AppConfig, db: Session, log: AppLogger, action: Action
+) -> DispatchTrace | None:
+    """Attempt agent dispatch. Return a DispatchTrace on success, None to
+    fall back to the manual path."""
+    try:
+        from ..orchestrator.runtime import (
+            NotConfigured,
+            dispatch_via_agents,
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warn({"err": str(e)}, "agentspan SDK not importable; falling back")
+        return None
+
+    try:
+        result = await dispatch_via_agents(cfg, db, log, action)
+    except NotConfigured as e:
+        log.info({"reason": str(e)}, "agent dispatch unavailable; falling back to manual")
+        return None
+    except Exception as e:  # noqa: BLE001
+        log.warn({"err": str(e), "action_id": action.id}, "agent dispatch raised; falling back")
+        return None
+
+    if not result.ok and result.fallback_to_manual:
+        # §5.3 — two malformed attempts. Surface to the inbox and let
+        # the manual path execute this action so the work still gets done.
+        from ..ingestion import IngestInput, ingest_event
+
+        await ingest_event(
+            cfg,
+            db,
+            log,
+            IngestInput(
+                source="linkbook",
+                type="agent.needs_approval",
+                subject_ref=action.subject_ref,
+                occurred_at=datetime.utcnow(),
+                payload={"agent_name": "orchestrator", "action_id": action.id},
+                dedupe_key=f"orchestrator:{action.id}",
+            ),
+        )
+        log.info({"action_id": action.id}, "agent fell back to manual; will dispatch directly")
+        return None
+
+    if not result.ok:
+        # Treat as a regular failure path — caller's exception handler
+        # will catch and write the action.failed audit row.
+        raise RuntimeError(result.summary)
+
+    # Pack the trace into a DispatchTrace. Tools captured detailed
+    # request/response per call; we summarize at the action level.
+    return DispatchTrace(
+        request={"prompt_action": action.type, "subject_ref": action.subject_ref},
+        response={"summary": result.summary, "tool_calls": result.trace},
+        http_status=200,
+    )

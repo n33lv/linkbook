@@ -7,31 +7,40 @@ The full product spec is in [`flight-os-spec.md`](./flight-os-spec.md). This REA
 ## TL;DR
 
 ```bash
-# one-time
+# one-time setup (run these once after cloning)
 cd apps/api_py
 uv venv --python 3.14 && uv pip install -e ".[dev]"
 cp .env.example .env
 .venv/bin/linkbook-migrate
 .venv/bin/linkbook-seed
 
-# every time
-.venv/bin/linkbook                 # API   → http://127.0.0.1:3000
-cd ../web && pnpm install && pnpm dev   # Web → http://127.0.0.1:5173
+cd ../web && pnpm install      # frontend deps, also one-time
+
+# every time you want to run the app — two processes, two terminals
+# Terminal 1:
+cd apps/api_py && .venv/bin/linkbook    # API → http://127.0.0.1:3000
+
+# Terminal 2:
+cd apps/web && pnpm dev                  # Web → http://127.0.0.1:5173
 ```
 
-Open http://127.0.0.1:5173.
+Then open http://127.0.0.1:5173.
+
+**Why two processes?** The API serves JSON; the frontend serves the React app and proxies API calls to it. They're independent and need to run side-by-side during development.
 
 ## Status
 
 **v1, mocked integrations.** The full system runs end-to-end against in-process mocks of the five integrations.
 
-- **Tests:** 29 passing (pytest), ~2s
-- **Stack:** FastAPI + SQLAlchemy 2 + Pydantic v2 + structlog
+- **Tests:** 31 passing (pytest), ~2s
+- **Stack:** FastAPI + SQLAlchemy 2 + Pydantic v2 + structlog + Agentspan
 - **Location:** `apps/api_py/`
 
 The agent runtime, event ingestion, ranking (§1.3), idempotency (§2.4), 30s undo queue with restart recovery (§2.5), hallucination guard (§5.3), composite kickoff with partial-failure recovery, and audit log (§2.6) are all real.
 
-**Real integration code paths** — OAuth flows (QBO, Harvest, Dropbox Sign, Airtable PKCE, Google PKCE), webhook signature verification, automatic token refresh — are wired in. Without API keys they short-circuit with a clear "not configured" error and the dev path stays on mocks. Real Agentspan, KMS encryption, Postgres, and durable jobs (Conductor) are deferred.
+**Real integration code paths** — OAuth flows (QBO, Harvest, Dropbox Sign, Airtable PKCE, Google PKCE), webhook signature verification, automatic token refresh — are wired in. Without API keys they short-circuit with a clear "not configured" error and the dev path stays on mocks. KMS encryption, Postgres, and durable jobs (Conductor) are deferred.
+
+**Agent-driven action dispatch (§5.3).** When `USE_AGENT_DISPATCH=true`, approving an action routes through an [Agentspan](https://github.com/agentspan-ai/agentspan) orchestrator agent that delegates to one of five per-source sub-agents (Gmail / QBO / Harvest / Dropbox Sign / Airtable). Each sub-agent has narrow, typed tools that wrap the existing integration clients. Default off in v1; the manual dispatcher remains the fallback. See [Agent dispatch architecture](#agent-dispatch-architecture) below.
 
 ## Stack
 
@@ -66,6 +75,16 @@ linkbook/
           oauth.py              # OAuth flows (QBO, Harvest, DropboxSign, Airtable PKCE, Google PKCE)
           token_manager.py      # auto-refresh tokens before expiry
           webhook_verify.py     # HMAC verification per source
+        orchestrator/           # Agentspan agent-driven dispatch (§5.3)
+          main_agent.py         # orchestrator with Strategy.HANDOFF over 5 sub-agents
+          gmail_agent.py        # Gmail tools (send_email, apply_labels)
+          qbo_agent.py          # QBO tools (get_invoice, apply_payment, mark_paid, void)
+          harvest_agent.py      # Harvest tools (send_invoice, create_project, log_time…)
+          dropboxsign_agent.py  # Sign tools (send_reminder, send_from_template, cancel)
+          airtable_agent.py     # Airtable tools (create_record, update_record, list)
+          context.py            # per-dispatch context + tool-call trace
+          runtime.py            # deploy + dispatch (server mode by name, direct mode by object)
+          worker.py             # `linkbook-agent-worker` — long-lived runtime.serve() process
         routes/                 # inbox, actions, events, dashboard, integrations, dev, webhooks/*
         seed.py                 # idempotent seed
         db/                     # SQLAlchemy 2 models + engine + migrate
@@ -137,9 +156,9 @@ Three layers:
 
 - **Unit** — ranking formula, idempotency hash, agent fallback (§5.3 fallback-to-Manual after two malformed responses), reconciler threshold (§5.3 0.85).
 - **Integration** — webhooks → ingestion → agent proposal → DB row, against the mocked HTTP boundary.
-- **End-to-end** — Cash Chaser approve → 30s queue → fire → Gmail mock receives the email → audit log captures request + response. Concierge 4-leg kickoff (happy path + partial-failure resume). Hallucination-guard cancellation. Restart recovery: rewind a queued_30s row's `queued_until` into the past, restart the server, observe the queued action fires.
+- **End-to-end** — Cash Chaser approve → 30s queue → fire → Gmail mock receives the email → audit log captures request + response. Concierge 4-leg kickoff (happy path + partial-failure resume). Hallucination-guard cancellation. Restart recovery: rewind a queued_30s row's `queued_until` into the past, restart the server, observe the queued action fires. Agent dispatch: stubbed orchestrator routes a kickoff approval and persists the tool-call trace into the audit row; fallback-to-manual emits `agent.needs_approval` and lets the manual dispatcher complete the work.
 
-29 tests, ~2s.
+31 tests, ~2s.
 
 ## What's wired
 
@@ -171,6 +190,52 @@ Connection list, source health, "Run probe" for the Harvest→QBO sync watchdog 
 - **CAS state transitions.** The 30s queue uses a compare-and-swap on `actions.status` so a timer firing and an undo arriving simultaneously can't both win — exactly one happens.
 - **OAuth + token refresh.** `integrations/oauth.py` builds authorization URLs and handles code-for-token exchange per source; `integrations/token_manager.py` auto-refreshes any token within 5 minutes of expiry. Webhook receivers verify HMAC signatures (Harvest, Dropbox Sign, Airtable) when `USE_INTEGRATION_MOCKS=false`.
 
+## Agent dispatch architecture
+
+When `USE_AGENT_DISPATCH=true`, approving an action runs an Agentspan orchestrator instead of the manual switch/case dispatcher.
+
+```
+                     ┌─────────────────────┐
+  approved action →  │  orchestrator agent │  Strategy.HANDOFF
+                     └──────────┬──────────┘
+        ┌───────────┬───────────┼───────────┬──────────┐
+        ▼           ▼           ▼           ▼          ▼
+     gmail       harvest      qbo       dropboxsign  airtable
+     agent       agent       agent      agent        agent
+       │           │           │           │           │
+       ▼           ▼           ▼           ▼           ▼
+   tools wrap   tools wrap  tools wrap   tools wrap  tools wrap
+   integrations/gmail.py   …/qbo.py     …/dropboxsign.py …/airtable.py
+```
+
+**The safety contract from §2.3 / §5.3 is preserved by where the agent sits, not by the agent itself:**
+
+- **HITL gate (§2.3).** Agents only run when a drafted action is approved. The agent decides *how* (which tools, in what sequence). The action's params decide *what* (recipient, amount, invoice id).
+- **Idempotency (§2.4).** Hash of `(type, subject_ref, semantic_payload)` is checked before reaching the agent. Cancelled / failed / undone proposals don't block fresh ones.
+- **Hallucination guard (§5.3).** `qbo.get_invoice` runs in `actions/execute.py` *before* the orchestrator is invoked. If the invoice flipped to paid externally, the action cancels and pending events auto-resolve — the agent never sees it.
+- **Fallback to manual (§5.3).** If the orchestrator fails to form a valid tool call after 2 attempts, an `agent.needs_approval` event hits the inbox AND the manual dispatcher takes over so the work still gets done.
+- **30s soft-undo (§2.5)** wraps the orchestrator call from the outside (`actions/queue.py`).
+- **Audit log (§2.6).** Each tool call is captured into a per-dispatch trace (`orchestrator/context.py`), persisted to `audit_events.response.tool_calls` on `action.succeeded`. Failed dispatches use the same path with `action.failed`.
+
+**Two execution modes:**
+
+- **Direct mode** (just `ANTHROPIC_API_KEY`). Orchestrator runs in-process inside the API. Tools execute locally. Easy to set up, but **runs are NOT visible in the Agentspan UI** because they never touch the server.
+- **Server mode** (`AGENTSPAN_SERVER_URL` + `AGENTSPAN_API_KEY`). On first dispatch the API calls `runtime.deploy(orchestrator, *sub_agents)` to register the agent definitions on the server, then every action dispatches by name (`runtime.run("orchestrator", ...)`). Runs show up in the Agentspan UI. **Requires a worker** — start `linkbook-agent-worker` alongside the API; it calls `runtime.serve(orchestrator, *sub_agents)` to poll the server for tool tasks. Without the worker, server-mode dispatches will hang.
+
+```bash
+# server mode — three processes
+agentspan serve                        # the agentspan server (or hosted)
+uv run linkbook-agent-worker           # tools live here
+uv run linkbook                        # API — dispatches by name
+```
+
+**Lazy-fail.** If `ANTHROPIC_API_KEY` is unset *and* `AGENTSPAN_SERVER_URL` is unreachable, `is_agentspan_available()` returns False and `actions/execute.py` falls back to the direct dispatcher per-action. No boot-time failure — dev-without-keys just keeps using mocks.
+
+**Why agents over rigid dispatchers** (the wedge):
+1. Natural-language ad-hoc work (later: free-form `/agents/run` endpoint).
+2. Onboarding new sources is one new sub-agent + tool wrappers, not a new code path through the dispatcher.
+3. Sequenced multi-step work ("send the reminder, then update Airtable status to 'awaiting payment'") happens by handoff, not by hand-coding a composite.
+
 ## Environment variables
 
 See [`apps/api_py/.env.example`](./apps/api_py/.env.example) for the canonical list (this is the file `pydantic-settings` reads). Key ones:
@@ -180,6 +245,11 @@ See [`apps/api_py/.env.example`](./apps/api_py/.env.example) for the canonical l
 | `PORT` | 3000 | API listen port |
 | `DATABASE_URL` | `file:./linkbook.db` | SQLite path; `file:` prefix optional |
 | `USE_INTEGRATION_MOCKS` | `true` | Flip off for real APIs (later) |
+| `USE_AGENT_DISPATCH` | `true` | Route action.execute through the Agentspan orchestrator (lazy-falls-back if neither key/URL is set) |
+| `AGENTSPAN_API_KEY` | — | Auth for the Agentspan server (server mode only) |
+| `AGENTSPAN_SERVER_URL` | — | Agentspan server, e.g. `http://localhost:6767/api` |
+| `AGENTSPAN_LLM_MODEL` | `anthropic/claude-3-5-sonnet-latest` | Model the orchestrator uses |
+| `ANTHROPIC_API_KEY` | — | Direct Anthropic key (alternative to Agentspan server) |
 | `SEND_DELAY_MS` | 30000 | Override the 30s queue (tests use 80) |
 | `RANK_W_*` | see file | Ranking weights — tunable from real data |
 | `LLM_DAILY_KILL_SWITCH_USD` | 20 | Runaway protector (§5.7) |
@@ -206,6 +276,8 @@ See [`apps/api_py/.env.example`](./apps/api_py/.env.example) for the canonical l
 | §4.1 Harvest→QBO sync probe | `apps/api_py/src/linkbook/routes/integrations_routes.py` |
 | §4.x OAuth + token refresh | `apps/api_py/src/linkbook/integrations/oauth.py`, `token_manager.py` |
 | §4.x webhook signature verification | `apps/api_py/src/linkbook/integrations/webhook_verify.py` |
+| §5.3 agent-driven dispatch (Agentspan) | `apps/api_py/src/linkbook/orchestrator/` |
+| §5.3 fallback after 2 malformed attempts | `apps/api_py/src/linkbook/orchestrator/runtime.py` (`_FAIL_COUNTS`) |
 | §5.1 read-through cache, no project owned | `apps/api_py/src/linkbook/db/models.py` (`Project`) |
 | §5.3 agents | `apps/api_py/src/linkbook/agents/*.py` |
 | §5.3 fallback-to-Manual | `apps/api_py/src/linkbook/agents/runtime.py` (`propose_with_fallback`) |
@@ -232,6 +304,6 @@ uv pip install -e ".[dev]"
 cp .env.example .env
 .venv/bin/linkbook-migrate
 .venv/bin/linkbook-seed
-.venv/bin/pytest -q  # 29 passing
+.venv/bin/pytest -q  # 31 passing
 .venv/bin/linkbook  # API on http://127.0.0.1:3000
 ```

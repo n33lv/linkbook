@@ -135,10 +135,19 @@ def _arm_timer(action_id: str, ms: int) -> None:
 
 
 async def cancel_send_delay(db: Session, action_id: str) -> bool:
+    """§2.5 soft-undo: clicked Undo within the 30s window.
+
+    Returns the action to `drafted` so the user can approve again or reject.
+    The integration call never fired, so there's nothing to compensate.
+
+    State transition: queued_30s → drafted (with queued_until cleared).
+    """
     t = _TIMERS.pop(action_id, None)
     if t is not None:
         t.cancel()
-    changed = cas_status(db, action_id, frm="queued_30s", to="cancelled")
+    changed = cas_status(
+        db, action_id, frm="queued_30s", to="drafted", queued_until=None
+    )
     if changed == 0:
         return False
     a = db.get(Action, action_id)
@@ -149,10 +158,10 @@ async def cancel_send_delay(db: Session, action_id: str) -> bool:
             actor="user",
             action_id=a.id,
             originating_event_id=a.originating_event_id,
-            kind="action.cancelled",
+            kind="action.unqueued",
             idempotency_key=a.idempotency_key,
             subject_ref=a.subject_ref,
-            note="soft-undo (30s window)",
+            note="soft-undo (30s window) — returned to drafted",
         )
     )
     db.commit()

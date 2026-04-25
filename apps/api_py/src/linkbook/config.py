@@ -33,8 +33,12 @@ class AppConfig(BaseSettings):
     STUDIO_LOADED_COST_RATE: float = Field(ge=0)
 
     ANTHROPIC_API_KEY: str | None = None
-    AGENTSPAN_BASE_URL: AnyUrl | None = None
+
+    # Agentspan SDK — these are the env names the SDK itself reads.
+    # Setting them in our config keeps everything declared in one place.
+    AGENTSPAN_SERVER_URL: AnyUrl | None = None
     AGENTSPAN_API_KEY: str | None = None
+    AGENTSPAN_LLM_MODEL: str | None = None
 
     LLM_DAILY_KILL_SWITCH_USD: float = Field(default=20, gt=0)
 
@@ -47,6 +51,13 @@ class AppConfig(BaseSettings):
     RANK_W_SNOOZED: float = 0.50
 
     USE_INTEGRATION_MOCKS: bool = True
+
+    # §5.3 — when true, action.execute routes through the Agentspan
+    # orchestrator instead of the manual dispatcher. Default off in v1
+    # so the test suite stays green without an Agentspan server / API key.
+    # Lazy-fail: if the SDK/server/model isn't available at runtime, we
+    # fall back to the direct dispatcher per-action.
+    USE_AGENT_DISPATCH: bool = False
 
     # 30s soft-undo window. Tests override this to keep runs fast.
     SEND_DELAY_MS: int = Field(default=30_000, gt=0)
@@ -85,7 +96,7 @@ class AppConfig(BaseSettings):
     # Empty strings in .env for the OAuth URL fields should mean "not set",
     # not "invalid URL". Coerce "" → None before URL validation runs.
     @field_validator(
-        "AGENTSPAN_BASE_URL",
+        "AGENTSPAN_SERVER_URL",
         "QBO_REDIRECT_URI",
         "HARVEST_REDIRECT_URI",
         "AIRTABLE_REDIRECT_URI",

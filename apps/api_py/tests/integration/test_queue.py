@@ -6,7 +6,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_approve_invoice_remind_queued_then_undo_cancels(app_client):
+async def test_approve_invoice_remind_queued_then_undo_returns_to_drafted(app_client):
     _app, ac = app_client
     # Trigger an aging event so Cash Chaser drafts a reminder.
     res = await ac.post(
@@ -47,7 +47,11 @@ async def test_approve_invoice_remind_queued_then_undo_cancels(app_client):
 
     undone = await ac.post(f"/actions/{draft['id']}/undo")
     assert undone.status_code == 200
-    assert undone.json()["method"] == "cancel_queued"
+    # §2.5 soft-undo: returns the action to drafted so the user can
+    # re-approve or reject. The integration call never fired so there's
+    # nothing to compensate.
+    assert undone.json()["method"] == "unqueued"
 
     detail = await ac.get(f"/actions/{draft['id']}")
-    assert detail.json()["action"]["status"] == "cancelled"
+    assert detail.json()["action"]["status"] == "drafted"
+    assert detail.json()["action"]["queued_until"] is None

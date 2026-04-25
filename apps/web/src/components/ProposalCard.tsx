@@ -47,6 +47,12 @@ export function ProposalCard({ action, onChange }: { action: ActionRow; onChange
       // when someone else already approved. Show a friendlier message.
       if (msg.includes('409')) {
         setErr('Already in flight or done — refresh to see the latest status.');
+      } else if (msg.includes('404')) {
+        // Action ID no longer exists. Common after a DB reseed; the browser
+        // is showing a stale card. Auto-refresh and tell the user.
+        setErr('This item was reset — refreshing…');
+        onChange();
+        setTimeout(() => onChange(), 200);
       } else {
         setErr(msg);
       }
@@ -61,7 +67,13 @@ export function ProposalCard({ action, onChange }: { action: ActionRow; onChange
       await post(`/actions/${action.id}/reject`);
       onChange();
     } catch (e) {
-      setErr((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg.includes('404')) {
+        setErr('This item was reset — refreshing…');
+        onChange();
+      } else {
+        setErr(msg);
+      }
     } finally {
       setBusy(false);
     }

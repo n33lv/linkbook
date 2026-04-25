@@ -1,6 +1,9 @@
-"""Idempotent seed mirroring apps/api/src/seed.ts.
+"""Idempotent seed.
 
-14 clients, 9 projects, 22 invoices, 14d time entries, 7 inbox events.
+14 clients, 9 projects, ~30 invoices, 14d time entries.
+Drives ~25 inbox events across the spec's full taxonomy, which fan out
+to ~25 drafted agent actions across Cash Chaser, Project Concierge,
+Time Sentinel, and Reconciler so the queue is rich for testing.
 """
 
 from __future__ import annotations
@@ -367,6 +370,178 @@ async def main() -> int:
                 dedupe_key="missing",
             ),
         )
+
+        # ----------------------------------------------------------------
+        # 8. Bulk fan-out so the inbox + actions queue is rich for testing.
+        # Targets ~25 drafted actions across all four agents.
+        # ----------------------------------------------------------------
+
+        # 16 more aging invoices → 16 Cash Chaser drafts.
+        # Mix of clients, amounts, and aging buckets (30/60/90/overdue).
+        bulk_aging = [
+            ("Stellate Studios", "INV-2001", 7_500, 35, "aging_30"),
+            ("Halford & Co.", "INV-2002", 22_000, 48, "aging_30"),
+            ("Petal & Vine", "INV-2003", 4_200, 38, "aging_30"),
+            ("Ridgemoor Group", "INV-2004", 16_900, 52, "aging_30"),
+            ("Cypress Labs", "INV-2005", 3_800, 33, "aging_30"),
+            ("Brightside Goods", "INV-2006", 9_100, 65, "aging_60"),
+            ("Meadowlark Co.", "INV-2007", 5_600, 71, "aging_60"),
+            ("Hill & Houseman", "INV-2008", 2_900, 78, "aging_60"),
+            ("Linkwell", "INV-2009", 11_400, 88, "aging_60"),
+            ("Foxglove Press", "INV-2010", 6_750, 84, "aging_60"),
+            ("Marlowe Editorial", "INV-2011", 3_300, 96, "aging_90"),
+            ("Cypress Bay", "INV-2012", 18_200, 110, "aging_90"),
+            ("Kestrel & Co.", "INV-2013", 4_950, 122, "aging_90"),
+            ("Halford & Co.", "INV-2014", 7_800, 18, "overdue"),
+            ("Petal & Vine", "INV-2015", 5_400, 8, "overdue"),
+            ("Ridgemoor Group", "INV-2016", 13_600, 25, "overdue"),
+        ]
+        bucket_to_event_type = {
+            "aging_30": "invoice.aging_30",
+            "aging_60": "invoice.aging_60",
+            "aging_90": "invoice.aging_90",
+            "overdue": "invoice.overdue",
+        }
+        for client_name, number, dollars, days, bucket in bulk_aging:
+            # Insert the invoice into the local cache (mirrors what CDC
+            # would have done) so dashboards / hallucination guard work.
+            existing = db.execute(
+                select(Invoice).where(Invoice.number == number)
+            ).scalar_one_or_none()
+            if existing is None:
+                due_at = today - timedelta(days=days)
+                issued_at = due_at - timedelta(days=30)
+                db.add(
+                    Invoice(
+                        client_id=client_by_name[client_name],
+                        number=number,
+                        amount_cents=dollars * 100,
+                        qbo_invoice_id=f"qbo_{number}",
+                        harvest_invoice_id=f"h_{number}",
+                        status="sent",
+                        issued_at=issued_at,
+                        due_at=due_at,
+                    )
+                )
+                store.invoices[f"qbo_{number}"] = MockInvoice(
+                    id=f"qbo_{number}",
+                    customer_id=f"qbo_{client_name.replace(' ', '_').lower()}",
+                    customer_name=client_name,
+                    doc_number=number,
+                    amount_cents=dollars * 100,
+                    issued_at=issued_at.isoformat(),
+                    due_at=due_at.isoformat(),
+                    paid_at=None,
+                    status="sent",
+                    source="qbo",
+                )
+            db.commit()
+
+            await ingest_event(
+                cfg,
+                db,
+                log,
+                IngestInput(
+                    source="qbo",
+                    type=bucket_to_event_type[bucket],
+                    subject_ref=f"invoice:qbo_{number}",
+                    occurred_at=datetime.utcnow(),
+                    payload={
+                        "invoice_id": f"qbo_{number}",
+                        "client_id": client_by_name[client_name],
+                        "amount_cents": dollars * 100,
+                        "currency": "USD",
+                        "issued_at": (today - timedelta(days=days + 30)).isoformat(),
+                        "due_at": (today - timedelta(days=days)).isoformat(),
+                        "days_overdue": days,
+                    },
+                    dedupe_key=bucket,
+                ),
+            )
+
+        # 4 more contract.signed → 4 Project Concierge kickoff drafts.
+        bulk_contracts = [
+            ("Cypress Bay", "sig_cypressbay_msa", "Cypress Bay — MSA"),
+            ("Foxglove Press", "sig_foxglove_editorial", "Foxglove Press — Editorial Retainer"),
+            ("Meadowlark Co.", "sig_meadowlark_brand", "Meadowlark Co. — Brand Sprint"),
+            ("Hill & Houseman", "sig_hillhouseman_print", "Hill & Houseman — Print System"),
+        ]
+        for client_name, sig_id, title in bulk_contracts:
+            await ingest_event(
+                cfg,
+                db,
+                log,
+                IngestInput(
+                    source="dropboxsign",
+                    type="contract.signed",
+                    subject_ref=f"contract:{sig_id}",
+                    occurred_at=datetime.utcnow() - timedelta(minutes=randint(5, 360)),
+                    payload={
+                        "signature_request_id": sig_id,
+                        "title": title,
+                        "client_id": client_by_name[client_name],
+                        "sent_at": (datetime.utcnow() - timedelta(days=randint(2, 14))).isoformat(),
+                        "signed_at": datetime.utcnow().isoformat(),
+                    },
+                    dedupe_key="signed",
+                ),
+            )
+
+        # 3 more payment.received_unapplied with EXACTLY ONE candidate
+        # → Reconciler will propose payment.apply (above 0.85 confidence).
+        bulk_payments = [
+            ("Halford & Co.", "qbo_pay_2", "HALFORD & CO LLC", 1_480_000, "qbo_INV-1029"),
+            ("Petal & Vine", "qbo_pay_3", "PETAL AND VINE LLC", 1_125_000, "qbo_INV-1044"),
+            ("Ridgemoor Group", "qbo_pay_4", "RIDGEMOOR GROUP", 980_000, "qbo_INV-1048"),
+        ]
+        for client_name, pay_id, raw_name, amount, target_inv in bulk_payments:
+            store.payments[pay_id] = MockPayment(
+                id=pay_id,
+                customer_name_raw=raw_name,
+                amount_cents=amount,
+                received_at=datetime.utcnow().isoformat(),
+                applied_to_invoice_id=None,
+            )
+            await ingest_event(
+                cfg,
+                db,
+                log,
+                IngestInput(
+                    source="qbo",
+                    type="payment.received_unapplied",
+                    subject_ref=f"payment:{pay_id}",
+                    occurred_at=datetime.utcnow(),
+                    payload={
+                        "qbo_payment_id": pay_id,
+                        "customer_name_raw": raw_name,
+                        "amount_cents": amount,
+                        "received_at": datetime.utcnow().isoformat(),
+                        "candidate_invoice_ids": [target_inv],
+                    },
+                    dedupe_key="unapplied",
+                ),
+            )
+
+        # 2 more time.missing_yesterday → 2 more Time Sentinel nudges.
+        for offset, hours in ((2, 1.5), (3, 3.0)):
+            day = datetime.utcnow() - timedelta(days=offset)
+            await ingest_event(
+                cfg,
+                db,
+                log,
+                IngestInput(
+                    source="harvest",
+                    type="time.missing_yesterday",
+                    subject_ref=f"time_entry:neel-{day.date().isoformat()}",
+                    occurred_at=datetime.utcnow() - timedelta(hours=offset * 12),
+                    payload={
+                        "harvest_user_id": "neel_b",
+                        "date": day.date().isoformat(),
+                        "hours_logged": hours,
+                    },
+                    dedupe_key="missing",
+                ),
+            )
 
         print("seed complete")
         return 0

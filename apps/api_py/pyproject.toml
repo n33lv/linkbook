@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28",
     "anyio>=4.6",
     "python-multipart>=0.0.20",
+    "agentspan>=0.1",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +30,9 @@ dev = [
 linkbook = "linkbook.__main__:main"
 linkbook-migrate = "linkbook.db.migrate:main"
 linkbook-seed = "linkbook.seed:_run_main"
+# Long-lived worker for server-mode Agentspan (UI tracking). Run alongside
+# the API when AGENTSPAN_SERVER_URL is set. Not needed for direct mode.
+linkbook-agent-worker = "linkbook.orchestrator.worker:main"
 
 [build-system]
 requires = ["hatchling"]
