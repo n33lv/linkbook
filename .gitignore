@@ -1,0 +1,71 @@
+# =========================================================
+# Linkbook — repo gitignore
+# =========================================================
+
+# ---- node / typescript ----
+node_modules/
+dist/
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/
+
+# vite
+.vite/
+apps/*/dist/
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# venvs
+.venv/
+venv/
+env/
+
+# tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# build artifacts
+*.egg-info/
+.eggs/
+build/
+
+# uv
+.uv/
+
+# ---- env / secrets ----
+.env
+.env.local
+.env.*.local
+.envrc
+
+# ---- databases (sqlite + sidecar journal/WAL/SHM files) ----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Drizzle's metadata journal
+packages/db/drizzle/meta/_journal.json.bak
+
+# ---- logs ----
+*.log
+/tmp/lb*.log
+
+# ---- editor / IDE ----
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
