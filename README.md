@@ -72,33 +72,24 @@ cd apps/api_py
 uv venv --python 3.14
 uv pip install -e ".[dev]"
 
-# 2. apply schema
-DATABASE_URL=file:./linkbook.db \
-DEV_PRINCIPAL_EMAIL=neel@flightdesign.co \
-DEV_PRINCIPAL_NAME=Neel \
-STUDIO_NAME='Flight Design Co.' \
-STUDIO_FISCAL_YEAR_START=01-01 \
-STUDIO_BILLABLE_TARGET_PCT=70 \
-STUDIO_LOADED_COST_RATE=85 \
-.venv/bin/python -m linkbook.db.migrate
+# 2. copy env (defaults work for dev)
+cp .env.example .env
 
-# 3. seed
-DATABASE_URL=file:./linkbook.db \
-<same env as above> \
+# 3. apply schema + seed
+.venv/bin/python -m linkbook.db.migrate
 .venv/bin/python -m linkbook.seed
 ```
 
 The seed creates 14 clients across 3 tiers, 9 active projects, 22 invoices spanning A/R aging buckets, time entries for the last 14 days, and the seven Inbox events from the UI sketch. It exercises every agent (Cash Chaser drafts a firm reminder, Project Concierge drafts a 4-leg kickoff, Time Sentinel drafts a self-nudge, Reconciler stays manual at low confidence per §5.3).
 
-Set the env vars once in `.env` (see `.env.example`) so you don't have to repeat them.
+`pydantic-settings` reads `.env` automatically from `apps/api_py/`. Override any value by exporting it in your shell or editing `.env` directly.
 
 ## Running locally
 
 ```bash
 # Terminal 1 — API on :3000
 cd apps/api_py
-DATABASE_URL=file:./linkbook.db <env> .venv/bin/uvicorn linkbook.app:app \
-  --port 3000 --host 127.0.0.1 --reload
+.venv/bin/uvicorn linkbook.app:app --port 3000 --host 127.0.0.1 --reload
 
 # Terminal 2 — Web on :5173
 cd apps/web
@@ -211,7 +202,8 @@ cd apps/api_py
 rm -rf .venv linkbook.db
 uv venv --python 3.14
 uv pip install -e ".[dev]"
-DATABASE_URL=file:./linkbook.db <env> .venv/bin/python -m linkbook.db.migrate
-DATABASE_URL=file:./linkbook.db <env> .venv/bin/python -m linkbook.seed
+cp .env.example .env
+.venv/bin/python -m linkbook.db.migrate
+.venv/bin/python -m linkbook.seed
 .venv/bin/pytest -q  # 29 passing
 ```

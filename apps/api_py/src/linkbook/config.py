@@ -82,6 +82,22 @@ class AppConfig(BaseSettings):
         `sqlite:///./x.db`. Stored as-is; the engine factory normalizes."""
         return v
 
+    # Empty strings in .env for the OAuth URL fields should mean "not set",
+    # not "invalid URL". Coerce "" → None before URL validation runs.
+    @field_validator(
+        "AGENTSPAN_BASE_URL",
+        "QBO_REDIRECT_URI",
+        "HARVEST_REDIRECT_URI",
+        "AIRTABLE_REDIRECT_URI",
+        "GOOGLE_REDIRECT_URI",
+        mode="before",
+    )
+    @classmethod
+    def _empty_url_to_none(cls, v: object) -> object:
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
 
 def load_config() -> AppConfig:
     return AppConfig()  # type: ignore[call-arg]
