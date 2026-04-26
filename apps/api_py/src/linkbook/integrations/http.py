@@ -35,10 +35,14 @@ class HttpTransport(Protocol):
 
 
 class FetchTransport:
-    """httpx-backed transport. Used in prod and when USE_INTEGRATION_MOCKS=false."""
+    """httpx-backed transport. Used in prod and when USE_INTEGRATION_MOCKS=false.
 
-    def __init__(self) -> None:
-        self._client = httpx.AsyncClient(timeout=30.0)
+    Each request opens its own httpx.AsyncClient. We can't cache one
+    long-lived client because Agentspan workers run each tool inside a
+    fresh asyncio.run() loop — a cached AsyncClient bound to a now-dead
+    loop raises "Event loop is closed" on the next call. The per-request
+    overhead is ~1ms on localhost; correctness wins.
+    """
 
     async def request(self, req: HttpRequest) -> HttpResponse:
         kwargs: dict[str, Any] = {"headers": dict(req.headers)}
@@ -47,7 +51,8 @@ class FetchTransport:
                 kwargs["content"] = req.body
             else:
                 kwargs["json"] = req.body
-        res = await self._client.request(req.method, req.url, **kwargs)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            res = await client.request(req.method, req.url, **kwargs)
         ct = res.headers.get("content-type", "")
         body: Any = res.text
         if "application/json" in ct and res.text:
@@ -60,9 +65,6 @@ class FetchTransport:
             headers=dict(res.headers),
             body=body,
         )
-
-    async def aclose(self) -> None:
-        await self._client.aclose()
 
 
 # Module-global transport (replaceable). Tests / dev install MockTransport.

@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Linkbook — Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0c0a07;
+    --bg-2: #14110c;
+    --ink: #efe7d4;
+    --ink-2: #b9ad92;
+    --muted: #6b6353;
+    --rule: #2a2418;
+    --gold: #d9b25c;
+    --gold-soft: #c69a3f;
+    --green: #9bb56a;
+    --red: #d27a5e;
+    --blue: #7da7c8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Fraunces", Georgia, serif;
+    font-feature-settings: "ss01", "liga", "kern";
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Slide stage ──────────────────────────────────────────────── */
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 6vh 7vw;
+    display: none;
+    flex-direction: column;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(217,178,92,0.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(125,167,200,0.04), transparent 70%),
+      var(--bg);
+  }
+  .slide.is-active { display: flex; }
+  .slide::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 90%);
+  }
+  .slide::after {
+    /* film grain */
+    content: "";
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.9 0 0 0 0 0.78 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    opacity: 0.5;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+
+  /* ── Chrome (top + bottom rails) ──────────────────────────────── */
+  .rail {
+    position: absolute;
+    left: 7vw; right: 7vw;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    z-index: 3;
+  }
+  .rail.top { top: 3.5vh; }
+  .rail.bot { bottom: 3.5vh; }
+  .rail .dot { color: var(--gold); }
+  .rail .sep { color: var(--rule); margin: 0 0.6em; }
+  .rail .pgn { color: var(--ink-2); }
+
+  /* ── Typography ───────────────────────────────────────────────── */
+  .eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .kicker {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(56px, 8.4vw, 156px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: var(--ink);
+  }
+  h2 {
+    font-family: "Fraunces", serif;
+    font-weight: 400;
+    font-size: clamp(36px, 4.8vw, 80px);
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+    margin: 0;
+    color: var(--ink);
+  }
+  h2 em { color: var(--gold); font-style: italic; font-weight: 300; }
+  h3 {
+    font-family: "Fraunces", serif;
+    font-weight: 500;
+    font-size: clamp(20px, 1.6vw, 28px);
+    margin: 0 0 0.4em 0;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  p, li {
+    font-family: "Fraunces", serif;
+    font-weight: 400;
+    font-size: clamp(16px, 1.25vw, 20px);
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+  .lede {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(22px, 2.2vw, 34px);
+    line-height: 1.35;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+  }
+  a { color: var(--gold); text-decoration: none; border-bottom: 1px solid rgba(217,178,92,0.3); }
+  a:hover { color: var(--ink); border-color: var(--ink); }
+  hr.rule {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 2.4em 0 1.6em 0;
+  }
+  ul.tight { list-style: none; padding: 0; margin: 0; }
+  ul.tight li {
+    padding: 0.55em 0;
+    border-bottom: 1px dashed var(--rule);
+    display: flex;
+    gap: 1em;
+    align-items: baseline;
+  }
+  ul.tight li::before {
+    content: "◆";
+    color: var(--gold);
+    font-size: 9px;
+    transform: translateY(-2px);
+  }
+  ul.tight li:last-child { border-bottom: 0; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 5vw; align-items: start; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4vw; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.8vw; }
+  .stack { display: flex; flex-direction: column; gap: 1.2em; }
+  .stretch { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+  /* ── Cards / chips ────────────────────────────────────────────── */
+  .card {
+    border: 1px solid var(--rule);
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0));
+    padding: 1.4em 1.4em 1.6em;
+    position: relative;
+  }
+  .card .num {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    margin-bottom: 0.6em;
+  }
+  .chip {
+    display: inline-block;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 0.32em 0.7em;
+    border: 1px solid var(--rule);
+    color: var(--ink-2);
+    margin-right: 0.4em;
+  }
+  .chip.gold { color: var(--gold); border-color: rgba(217,178,92,0.45); }
+  .chip.green { color: var(--green); border-color: rgba(155,181,106,0.45); }
+  .chip.red { color: var(--red); border-color: rgba(210,122,94,0.45); }
+  .chip.blue { color: var(--blue); border-color: rgba(125,167,200,0.45); }
+
+  .stat {
+    display: flex; flex-direction: column; gap: 0.3em;
+    border-left: 2px solid var(--gold);
+    padding: 0.2em 0 0.2em 1em;
+  }
+  .stat .v {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(40px, 4.2vw, 64px);
+    color: var(--ink);
+    line-height: 1;
+  }
+  .stat .l {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Cover ────────────────────────────────────────────────────── */
+  .cover { justify-content: space-between; }
+  .cover .marque {
+    display: flex; flex-direction: column; gap: 1.2em;
+  }
+  .cover .markline {
+    display: flex; align-items: baseline; gap: 1.2em;
+  }
+  .cover .markline .lozenge {
+    width: 14px; height: 14px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    display: inline-block;
+  }
+  .cover .markline .name {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .cover h1 .ital { font-style: italic; color: var(--gold); }
+  .cover .meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.4em;
+  }
+  .cover .meta .cell {
+    border-right: 1px solid var(--rule);
+    padding: 0 1.2em;
+  }
+  .cover .meta .cell:first-child { padding-left: 0; }
+  .cover .meta .cell:last-child { border-right: 0; padding-right: 0; }
+  .cover .meta .l {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5em;
+  }
+  .cover .meta .v {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--ink);
+    font-size: clamp(18px, 1.4vw, 22px);
+  }
+
+  /* ── Demo / proposal mockup ───────────────────────────────────── */
+  .mock {
+    border: 1px solid var(--rule);
+    background: rgba(0,0,0,0.35);
+    padding: 1.4em;
+    border-left: 2px solid var(--gold);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--ink-2);
+  }
+  .mock .head {
+    display: flex; gap: 1em; align-items: center; margin-bottom: 0.4em;
+    color: var(--gold);
+  }
+  .mock .conf {
+    margin-left: auto;
+    color: var(--ink);
+    letter-spacing: 0.1em;
+  }
+  .mock .targets { margin: 0.4em 0; }
+  .mock .targets .chip { font-size: 9.5px; padding: 0.2em 0.55em; margin-right: 0.3em; color: var(--red); border-color: rgba(210,122,94,0.45); }
+  .mock .body { font-family: "Fraunces", serif; font-style: italic; font-size: 16px; color: var(--ink); margin: 0.6em 0; }
+  .mock .actions {
+    display: flex; gap: 0.7em; align-items: center; margin-top: 0.6em;
+  }
+  .mock .btn {
+    border: 1px solid var(--gold);
+    background: var(--gold);
+    color: #1a1408;
+    padding: 0.5em 1em;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .mock .btn.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule); }
+  .mock .undo { color: var(--muted); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; margin-left: auto; }
+
+  /* ── Compare table (vs Merge / Paragon) ──────────────────────── */
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Fraunces", serif;
+  }
+  .compare th, .compare td {
+    text-align: left;
+    padding: 1em 1.2em;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .compare th {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .compare th.us { color: var(--gold); }
+  .compare td.lbl {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    width: 22%;
+  }
+  .compare td p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .compare td.us { background: rgba(217,178,92,0.04); }
+
+  /* ── Architecture diagram ─────────────────────────────────────── */
+  .arch {
+    margin-top: 1.5em;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .arch .col {
+    padding: 1.4em 1.2em;
+    border-right: 1px solid var(--rule);
+    color: var(--ink-2);
+  }
+  .arch .col:last-child { border-right: 0; }
+  .arch .col .h {
+    color: var(--gold);
+    margin-bottom: 0.8em;
+    font-size: 10.5px;
+  }
+  .arch .col ul { list-style: none; padding: 0; margin: 0; }
+  .arch .col ul li {
+    border: 0;
+    padding: 0.35em 0;
+    font-size: 11.5px;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .arch .col ul li::before { content: ""; }
+  .arch .col ul li::marker { content: ""; }
+
+  /* ── Nav / progress ───────────────────────────────────────────── */
+  .progress {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px; background: transparent;
+    z-index: 4;
+  }
+  .progress .bar {
+    height: 100%;
+    background: var(--gold);
+    width: 0%;
+    transition: width 240ms ease;
+  }
+  .nav-hint {
+    position: absolute;
+    right: 7vw; bottom: 3.5vh;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    z-index: 3;
+  }
+  .nav-hint kbd {
+    border: 1px solid var(--rule);
+    padding: 0.1em 0.5em;
+    margin: 0 0.15em;
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: 10px;
+  }
+
+  /* ── Misc ─────────────────────────────────────────────────────── */
+  .footnote {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+  .demo-link {
+    display: inline-flex; align-items: center; gap: 0.6em;
+    border: 1px solid var(--gold);
+    padding: 0.7em 1.1em;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(217,178,92,0.04);
+  }
+  .demo-link:hover { color: var(--ink); border-color: var(--ink); background: rgba(217,178,92,0.08); }
+  .demo-link::after { content: "→"; }
+
+  /* ── Receipts / screenshot grid ───────────────────────────────── */
+  .receipts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr 1fr;
+    gap: 1.2vw;
+    flex: 1;
+    min-height: 0;
+  }
+  .shot {
+    position: relative;
+    border: 1px solid var(--rule);
+    background: rgba(0,0,0,0.4);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: border-color 200ms ease;
+  }
+  .shot:hover { border-color: rgba(217,178,92,0.4); }
+  .shot .frame {
+    flex: 1;
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-color: #0a0905;
+    position: relative;
+    min-height: 0;
+  }
+  .shot .frame::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(12,10,7,0.85) 100%);
+    pointer-events: none;
+  }
+  .shot.is-empty .frame {
+    display: flex; align-items: center; justify-content: center;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0 14px, transparent 14px 28px);
+  }
+  .shot.is-empty .frame::before {
+    content: "img/" attr(data-src);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: lowercase;
+    z-index: 2;
+  }
+  .shot .cap {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 0.85em 1em 0.95em;
+    z-index: 3;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, transparent, rgba(12,10,7,0.92));
+  }
+  .shot .cap .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px;
+    color: var(--gold);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 0.25em;
+  }
+  .shot .cap .h {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.15;
+    margin-bottom: 0.2em;
+  }
+  .shot .cap .d {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--ink-2);
+    line-height: 1.3;
+    letter-spacing: 0.04em;
+  }
+
+  .demo-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 1em;
+    gap: 2em;
+  }
+  .demo-head .left { flex: 1; min-width: 0; }
+  .demo-head h2 { font-size: clamp(28px, 3.2vw, 48px); }
+  .demo-head .right {
+    display: flex; gap: 1.4em; align-items: baseline;
+  }
+  .demo-head .stat-mini {
+    display: flex; flex-direction: column; gap: 0.1em;
+    border-left: 1px solid var(--gold);
+    padding-left: 0.8em;
+  }
+  .demo-head .stat-mini .v {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--ink);
+    font-size: 28px;
+    line-height: 1;
+  }
+  .demo-head .stat-mini .l {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.25em;
+  }
+
+  .impact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; align-items: stretch; }
+  .impact-grid .card { display: flex; flex-direction: column; gap: 0.6em; min-height: 100%; }
+  .impact-grid .v {
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: clamp(46px, 5.4vw, 84px);
+    color: var(--gold);
+    line-height: 1;
+    margin-top: 0.2em;
+  }
+
+  .ascii {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    color: var(--rule);
+    line-height: 1.2;
+    white-space: pre;
+    user-select: none;
+  }
+
+  /* responsive nudge for small windows */
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .impact-grid { grid-template-columns: 1fr; }
+    .arch { grid-template-columns: 1fr; }
+    .arch .col { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .cover .meta { grid-template-columns: 1fr 1fr; gap: 1em; }
+    .cover .meta .cell { border-right: 0; padding: 0; }
+  }
+
+  /* print → PDF export */
+  @media print {
+    @page { size: 16in 9in; margin: 0; }
+    html, body { background: var(--bg) !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .stage { height: auto; width: 16in; }
+    .slide {
+      display: flex !important;
+      page-break-after: always;
+      break-after: page;
+      width: 16in;
+      height: 9in;
+      position: relative;
+      inset: auto;
+    }
+    .slide:last-child { page-break-after: auto; break-after: auto; }
+    .nav-hint, .progress { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="progress"><div class="bar" id="bar"></div></div>
+
+  <!-- ───────────── 1 · COVER ──────────────────────────────────── -->
+  <section class="slide is-active" data-slide="1">
+    <div class="rail top">
+      <span><span class="dot">◆</span> LINKBOOK <span class="sep">/</span> PITCH DECK</span>
+      <span class="pgn">01 — 07</span>
+    </div>
+
+    <div class="stretch">
+      <div class="marque">
+        <div class="markline">
+          <span class="lozenge"></span>
+          <span class="name">LINKBOOK</span>
+        </div>
+        <div class="eyebrow">An operator's cockpit, for studios that don't have an operator.</div>
+        <h1>The <span class="ital">quiet</span> ops layer<br/>for small studios.</h1>
+        <p class="lede" style="max-width: 60ch;">
+          QuickBooks, Harvest, Dropbox Sign, Airtable and Gmail — read into one
+          ranked inbox. Linkbook proposes the next move; you approve it in one click.
+        </p>
+      </div>
+    </div>
+
+    <div class="cover meta">
+      <div class="cell">
+        <div class="l">Built for</div>
+        <div class="v">1–10 person creative studios</div>
+      </div>
+      <div class="cell">
+        <div class="l">Pattern</div>
+        <div class="v">Human-in-the-loop, agent-driven</div>
+      </div>
+      <div class="cell">
+        <div class="l">Status</div>
+        <div class="v">Working prototype, live integrations</div>
+      </div>
+      <div class="cell">
+        <div class="l">Date</div>
+        <div class="v">April 2026</div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// concierge for the studio that runs itself</span>
+      <span></span>
+    </div>
+    <div class="nav-hint"><kbd>←</kbd><kbd>→</kbd> NAVIGATE</div>
+  </section>
+
+  <!-- ───────────── 2 · PROBLEM ────────────────────────────────── -->
+  <section class="slide" data-slide="2">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 02 <span class="sep">/</span> THE PROBLEM</span>
+      <span class="pgn">02 — 07</span>
+    </div>
+
+    <div class="stretch">
+      <div class="eyebrow">The problem</div>
+      <h2 style="margin: 0.4em 0 0.2em 0;">A 5-person studio runs<br/>on <em>seven browser tabs</em><br/>and one tired founder.</h2>
+
+      <div class="grid-2" style="margin-top: 3em;">
+        <div class="stack">
+          <p class="lede" style="margin: 0;">
+            Small creative studios — design, editorial, branding, content — live
+            inside QuickBooks, Harvest, Dropbox Sign, Airtable, and Gmail.
+            None of these tools talk to each other. So the founder does.
+          </p>
+          <hr class="rule" />
+          <ul class="tight">
+            <li><strong style="color:var(--ink)">Contracts get signed in Dropbox Sign</strong> &nbsp; — but the project never lands in Harvest, the client never lands in Airtable, the kickoff email never goes out.</li>
+            <li><strong style="color:var(--ink)">Invoices age in QuickBooks</strong> &nbsp; — until someone notices, drafts a polite reminder, and sends it manually.</li>
+            <li><strong style="color:var(--ink)">Payments land unapplied</strong> &nbsp; — and sit there, because matching them to invoices is "later this week."</li>
+            <li><strong style="color:var(--ink)">Time isn't logged</strong> &nbsp; — until Friday at 6pm.</li>
+          </ul>
+        </div>
+
+        <div class="stack">
+          <div class="card">
+            <div class="num">01 / WHO</div>
+            <h3>1–10 person creative studios.</h3>
+            <p>Founder-led. No ops hire. Already paying for QBO, Harvest, Sign, Airtable, Gmail.</p>
+          </div>
+          <div class="card">
+            <div class="num">02 / WHY NOW</div>
+            <h3>The "ops tax" is a tax on margins.</h3>
+            <p>Studios in this band leave 4–8 hours per week on glue work — context-switching across tools that should already be cooperating.</p>
+          </div>
+          <div class="card">
+            <div class="num">03 / WHY NOT JUST HIRE</div>
+            <h3>An ops hire is a $70k decision.</h3>
+            <p>Most studios at this size can't justify it — so the founder absorbs it, badly. The work doesn't disappear; the margin does.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// the gap is between tools, not inside them</span>
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ───────────── 3 · SOLUTION ───────────────────────────────── -->
+  <section class="slide" data-slide="3">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 03 <span class="sep">/</span> THE SOLUTION</span>
+      <span class="pgn">03 — 07</span>
+    </div>
+
+    <div class="stretch">
+      <div class="eyebrow">What we built</div>
+      <h2 style="margin: 0.3em 0 0.2em 0;">One ranked inbox.<br/>Agents propose. <em>You approve.</em></h2>
+
+      <div class="grid-2" style="margin-top: 2em; align-items: stretch;">
+        <div class="stack">
+          <p class="lede" style="margin: 0;">
+            Linkbook ingests events from all five tools, scores them, and surfaces
+            only the ones that need a human. For each one, an agent drafts the
+            concrete next action — and waits for one click.
+          </p>
+
+          <div class="grid-3" style="margin-top: 1.2em;">
+            <div class="card">
+              <div class="num">01 / READ</div>
+              <h3>Cross-tool inbox</h3>
+              <p>QBO, Harvest, Sign, Airtable, Gmail — one ranked feed. No tab-switching.</p>
+            </div>
+            <div class="card">
+              <div class="num">02 / PROPOSE</div>
+              <h3>Agent drafts the move</h3>
+              <p>Specialized sub-agents per integration. Confidence-scored. Reads the context, drafts the action, surfaces it.</p>
+            </div>
+            <div class="card">
+              <div class="num">03 / APPROVE</div>
+              <h3>One click, with undo</h3>
+              <p>Approve, edit, or reject. Idempotent dispatch. 24h soft-undo on every action.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="mock">
+            <div class="head">
+              <span>◆ PROJECT_CONCIERGE</span>
+              <span style="color:var(--ink-2)">·</span>
+              <span style="color:var(--ink-2)">PROJECT_KICKOFF</span>
+              <span class="conf">CONF&nbsp;&nbsp;━━━━━━━&nbsp;&nbsp;0.96</span>
+            </div>
+            <div class="targets">
+              → <span class="chip">HARVEST</span><span class="chip">AIRTABLE</span><span class="chip">GMAIL</span>
+            </div>
+            <div class="body">
+              "Counterparty matched to existing client; Drive template applies;
+              4-leg kickoff is the standard pattern."
+            </div>
+            <div style="font-family: 'Fraunces', serif; color: var(--ink);">
+              4-leg kickoff for <em>Glasshouse Goods — DTC Site</em>
+            </div>
+            <div class="actions">
+              <span class="btn">APPROVE &amp; SEND</span>
+              <span class="btn ghost">REJECT</span>
+              <span class="undo">TRUE UNDO WITHIN 24H</span>
+            </div>
+          </div>
+          <div class="footnote">
+            Real agent run · Real Harvest project gets created · Real audit trail
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// agents handle the toil. the human keeps the judgment.</span>
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ───────────── 4 · DEMO (receipts grid) ──────────────────── -->
+  <section class="slide" data-slide="4">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 04 <span class="sep">/</span> DEMO &nbsp;·&nbsp; RECEIPTS</span>
+      <span class="pgn">04 — 07</span>
+    </div>
+
+    <div class="stretch" style="gap: 1em;">
+      <div class="demo-head">
+        <div class="left">
+          <div class="eyebrow">Walkthrough · contract signed → project created, real APIs</div>
+          <h2 style="margin: 0.2em 0 0;">No smoke. <em>Real OAuth, real Harvest project, real audit trail.</em></h2>
+        </div>
+        <div class="right">
+          <div class="stat-mini"><span class="v">591</span><span class="l">agent runs</span></div>
+          <div class="stat-mini"><span class="v">12</span><span class="l">actions done</span></div>
+          <div class="stat-mini"><span class="v">5/5</span><span class="l">connected</span></div>
+        </div>
+      </div>
+
+      <div class="receipts">
+
+        <!-- 1: Inbox -->
+        <div class="shot is-empty" data-src="linkbook-inbox.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">01 / INBOX</div>
+            <div class="h">Ranked feed. Proposal card.</div>
+            <div class="d">PROJECT_CONCIERGE · CONF 0.96 · → HARVEST · AIRTABLE · GMAIL</div>
+          </div>
+        </div>
+
+        <!-- 2: Actions -->
+        <div class="shot is-empty" data-src="linkbook-actions.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">02 / ACTIONS</div>
+            <div class="h">The queue, with audit.</div>
+            <div class="d">9 AWAITING · 2 IN FLIGHT · 12 DONE · idempotent · 24h undo</div>
+          </div>
+        </div>
+
+        <!-- 3: Dashboard -->
+        <div class="shot is-empty" data-src="linkbook-dashboard.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">03 / CASH VIEW</div>
+            <div class="h">The operator's morning.</div>
+            <div class="d">$234.9k A/R · DSO 26d · top outstanding · click → invoice</div>
+          </div>
+        </div>
+
+        <!-- 4: Harvest projects -->
+        <div class="shot is-empty" data-src="harvest-projects.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">04 / HARVEST</div>
+            <div class="h">Real projects, in their tool.</div>
+            <div class="d">Almanac · Driftwood · Saltbrook · created via OAuth, not mocks</div>
+          </div>
+        </div>
+
+        <!-- 5: Agentspan runs -->
+        <div class="shot is-empty" data-src="agentspan-runs.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">05 / AGENTSPAN</div>
+            <div class="h">Every run, observable.</div>
+            <div class="d">591 executions · gmail · orchestrator_router_wf · completed</div>
+          </div>
+        </div>
+
+        <!-- 6: Agentspan trace -->
+        <div class="shot is-empty" data-src="agentspan-trace.png">
+          <div class="frame"></div>
+          <div class="cap">
+            <div class="num">06 / TRACE</div>
+            <div class="h">Tool-by-tool replay.</div>
+            <div class="d">gmail agent · 15.5s · 5.4k/495 tokens · send_email · 3 attempts</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: flex; gap: 0.8em; align-items: center; margin-top: 0.6em; flex-wrap: wrap;">
+        <a class="demo-link" href="http://localhost:5173" target="_blank">OPEN LINKBOOK&nbsp;&nbsp;</a>
+        <a class="demo-link" href="http://localhost:6767" target="_blank" style="border-color: var(--rule); color: var(--ink-2);">OPEN AGENTSPAN&nbsp;&nbsp;</a>
+        <a class="demo-link" href="https://id.getharvest.com/accounts" target="_blank" style="border-color: var(--rule); color: var(--ink-2);">OPEN HARVEST&nbsp;&nbsp;</a>
+        <span class="footnote" style="margin-left: auto;">// before: 4 tabs, 12 minutes &nbsp;·&nbsp; after: 1 click, 4 seconds</span>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// agents propose · operator approves · downstream tools update · receipts everywhere</span>
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ───────────── 5 · WHY FOR SMBs / VS COMPETITORS ─────────── -->
+  <section class="slide" data-slide="5">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 05 <span class="sep">/</span> WHY THIS WORKS FOR SMBs</span>
+      <span class="pgn">05 — 07</span>
+    </div>
+
+    <div class="stretch">
+      <div class="eyebrow">Adoption story · &amp; how this is different from Merge / Paragon</div>
+      <h2 style="margin: 0.3em 0 0.6em 0;">Built <em>for the operator</em>, not<br/>for another company's backend.</h2>
+
+      <div class="grid-2" style="gap: 3vw; align-items: start;">
+        <div class="stack">
+          <div class="card">
+            <div class="num">REALISTIC TO ADOPT</div>
+            <h3>Works on tools they already own.</h3>
+            <p>QuickBooks, Harvest, Dropbox Sign, Airtable, Gmail. OAuth in once. No data migration. No re-platforming. No new system of record.</p>
+          </div>
+          <div class="card">
+            <div class="num">FAST TO PILOT</div>
+            <h3>Single-tenant, single-user. Ship in days.</h3>
+            <p>Real OAuth flows for each integration · per-source live/mock toggle · seedable demo data · audit trail and soft-undo from day one.</p>
+          </div>
+          <div class="card">
+            <div class="num">CALM BY DESIGN</div>
+            <h3>HITL, not autopilot.</h3>
+            <p>Confidence-scored proposals. Operator stays in the loop on every consequential action. Trust compounds; automation expands as it earns it.</p>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="kicker">Linkbook is not Merge AI. Linkbook is not Paragon.</div>
+          <table class="compare">
+            <thead>
+              <tr>
+                <th></th>
+                <th>MERGE AI / PARAGON</th>
+                <th class="us">LINKBOOK</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="lbl">Who they sell to</td>
+                <td><p>B2B SaaS companies that need to integrate with <em>their customers'</em> tools.</p></td>
+                <td class="us"><p>The studio itself, directly. The end operator is the user.</p></td>
+              </tr>
+              <tr>
+                <td class="lbl">What they ship</td>
+                <td><p>A unified API, webhooks, sync infrastructure. Plumbing.</p></td>
+                <td class="us"><p>A product. An inbox, a proposal UI, a dashboard. The thing the operator opens every morning.</p></td>
+              </tr>
+              <tr>
+                <td class="lbl">Where the agent lives</td>
+                <td><p>You build it. They give you the pipes.</p></td>
+                <td class="us"><p>It's the core. Specialized sub-agents per integration, with HITL approval baked in.</p></td>
+              </tr>
+              <tr>
+                <td class="lbl">Time to value for an SMB</td>
+                <td><p>Months — there has to be a SaaS in the middle building on top of them.</p></td>
+                <td class="us"><p>One OAuth flow. Today.</p></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footnote">
+            Merge / Paragon are <em>infrastructure for someone else's product.</em> Linkbook is the product.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// they sell shovels to the SaaS companies. we hand the studio a finished house.</span>
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ───────────── 6 · IMPACT ─────────────────────────────────── -->
+  <section class="slide" data-slide="6">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 06 <span class="sep">/</span> IMPACT</span>
+      <span class="pgn">06 — 07</span>
+    </div>
+
+    <div class="stretch">
+      <div class="eyebrow">What changes if this works</div>
+      <h2 style="margin: 0.3em 0 0.8em 0;">Studios get a <em>silent</em> ops hire.</h2>
+
+      <div class="impact-grid">
+        <div class="card">
+          <div class="num">TIME RECLAIMED</div>
+          <div class="v">4–8h</div>
+          <h3 style="margin-top: 0.3em;">Per founder, per week.</h3>
+          <p>Reminders, kickoffs, payment matching, time-entry chasing — no longer manual. That's a working day a week back.</p>
+        </div>
+        <div class="card">
+          <div class="num">REVENUE DEFENDED</div>
+          <div class="v">↑</div>
+          <h3 style="margin-top: 0.3em;">Faster collection, fewer drops.</h3>
+          <p>Aged invoices get reminded on day one, not day forty. Unapplied payments get applied. Project kickoffs don't sit in someone's head.</p>
+        </div>
+        <div class="card">
+          <div class="num">HIRING DEFERRED</div>
+          <div class="v">−1</div>
+          <h3 style="margin-top: 0.3em;">Ops hire postponed by a year+.</h3>
+          <p>The first ops hire at a studio is usually a $70k decision made under pressure. Linkbook absorbs the toil so the hire happens later — and on better terms.</p>
+        </div>
+      </div>
+
+      <hr class="rule" />
+
+      <div class="grid-2" style="gap: 4vw; align-items: start;">
+        <div>
+          <div class="kicker">Validation</div>
+          <p style="margin-top: 0.6em;">
+            Built end-to-end against real APIs. Real Harvest OAuth, real project
+            creation, real audit trail. The five views in the dashboard
+            (Cash · Pipeline · Utilization · Project health · Clients) map directly
+            to questions every studio founder is asking on Sunday night.
+          </p>
+        </div>
+        <div>
+          <div class="kicker">Architecture</div>
+          <div class="arch">
+            <div class="col">
+              <div class="h">READ</div>
+              <ul>
+                <li>qbo</li>
+                <li>harvest</li>
+                <li>dropbox sign</li>
+                <li>airtable</li>
+                <li>gmail</li>
+              </ul>
+            </div>
+            <div class="col">
+              <div class="h">PROPOSE</div>
+              <ul>
+                <li>reconciler</li>
+                <li>project_concierge</li>
+                <li>per-integration agents</li>
+                <li>confidence + tier scoring</li>
+              </ul>
+            </div>
+            <div class="col">
+              <div class="h">DISPATCH</div>
+              <ul>
+                <li>HITL approval</li>
+                <li>idempotent execute</li>
+                <li>24h soft-undo</li>
+                <li>full audit trail</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// the studio that runs itself isn't an autonomous studio. it's a calmer one.</span>
+      <span></span>
+    </div>
+  </section>
+
+  <!-- ───────────── 7 · WRAP ───────────────────────────────────── -->
+  <section class="slide" data-slide="7">
+    <div class="rail top">
+      <span><span class="dot">◆</span> 07 <span class="sep">/</span> WRAP</span>
+      <span class="pgn">07 — 07</span>
+    </div>
+
+    <div class="stretch" style="justify-content: space-between;">
+      <div>
+        <div class="eyebrow">In one sentence</div>
+        <h1 style="font-size: clamp(56px, 7vw, 130px); margin-top: 0.2em;">
+          Linkbook is the <span style="color:var(--gold); font-style: italic;">silent operator</span><br/>
+          for studios that don't have one.
+        </h1>
+      </div>
+
+      <div class="grid-2" style="gap: 4vw; align-items: end;">
+        <div class="stack">
+          <p class="lede" style="margin: 0; max-width: 50ch;">
+            QBO + Harvest + Sign + Airtable + Gmail, read into one ranked inbox.
+            Agents propose. You approve. The work gets done.
+            Calm. Dense. Auditable.
+          </p>
+          <div style="display: flex; gap: 0.8em; flex-wrap: wrap; margin-top: 1em;">
+            <span class="chip gold">HITL</span>
+            <span class="chip">5 INTEGRATIONS</span>
+            <span class="chip">REAL OAUTH</span>
+            <span class="chip">IDEMPOTENT</span>
+            <span class="chip">24H UNDO</span>
+            <span class="chip">SINGLE-TENANT</span>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card" style="border-color: rgba(217,178,92,0.4);">
+            <div class="num">NEXT</div>
+            <h3>Pilot with one studio.</h3>
+            <p>One studio, one operator, one month. Real signal: how many actions get approved, how many hours come back, how many ops hires get deferred.</p>
+          </div>
+          <a class="demo-link" href="http://localhost:5173" target="_blank">OPEN THE DEMO&nbsp;&nbsp;</a>
+        </div>
+      </div>
+
+      <div class="cover meta" style="margin-top: 3em;">
+        <div class="cell">
+          <div class="l">Contact</div>
+          <div class="v">neel@baraiya.com</div>
+        </div>
+        <div class="cell">
+          <div class="l">Repository</div>
+          <div class="v">linkbook · monorepo</div>
+        </div>
+        <div class="cell">
+          <div class="l">Stack</div>
+          <div class="v">FastAPI · React · Agentspan</div>
+        </div>
+        <div class="cell">
+          <div class="l">Status</div>
+          <div class="v">Working prototype</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail bot">
+      <span class="mono">// thank you · questions welcome</span>
+      <span></span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const bar = document.getElementById('bar');
+  let i = 0;
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('is-active', idx === i));
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { go(i + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { go(i - 1); e.preventDefault(); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (/^[1-9]$/.test(e.key)) go(parseInt(e.key, 10) - 1);
+  });
+
+  // click right half = next, left half = prev
+  document.querySelector('.stage').addEventListener('click', (e) => {
+    const w = window.innerWidth;
+    if (e.clientX > w / 2) go(i + 1);
+    else go(i - 1);
+  });
+
+  go(0);
+
+  // ── Receipts: load images if they exist; otherwise leave the
+  //    diagonal-stripe placeholder with the filename hint visible.
+  document.querySelectorAll('.shot').forEach((el) => {
+    const src = el.getAttribute('data-src');
+    if (!src) return;
+    const url = 'img/' + src;
+    const test = new Image();
+    test.onload = () => {
+      el.classList.remove('is-empty');
+      el.querySelector('.frame').style.backgroundImage = `url("${url}")`;
+    };
+    test.onerror = () => { /* keep placeholder */ };
+    test.src = url;
+  });
+</script>
+
+</body>
+</html>

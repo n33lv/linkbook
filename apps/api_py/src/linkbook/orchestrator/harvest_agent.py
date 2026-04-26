@@ -10,11 +10,12 @@ from typing import Any
 
 from agentspan.agents import Agent
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from ..config import load_config
+from ..config import AppConfig, load_config
 from ..db.models import IntegrationConnection
 from ..integrations.harvest import create_harvest_client
-from .context import async_tool, get_agent_context, record_tool_call
+from .context import async_tool, tool_resources
 
 _INSTRUCTIONS = """\
 You handle Harvest actions for a small design studio.
@@ -31,58 +32,65 @@ Don't fabricate ids.
 """
 
 
-def _conn(ctx) -> IntegrationConnection:
-    conn = ctx.db.execute(
+def _harvest_client(cfg: AppConfig, db: Session):
+    conn = db.execute(
         select(IntegrationConnection).where(IntegrationConnection.source == "harvest")
     ).scalar_one_or_none()
     if conn is None:
         raise RuntimeError("harvest integration not connected")
-    return conn
+    return create_harvest_client(cfg, conn)
 
 
 @async_tool
 async def send_invoice(harvest_invoice_id: str) -> dict[str, Any]:
     """Send a Harvest invoice that's already drafted."""
-    ctx = get_agent_context()
-    client = create_harvest_client(ctx.cfg, _conn(ctx))
-    try:
-        resp = await client.send_invoice(harvest_invoice_id)
-        record_tool_call(
-            "send_invoice", {"harvest_invoice_id": harvest_invoice_id}, response=resp, http_status=201
-        )
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("send_invoice", {"harvest_invoice_id": harvest_invoice_id}, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _harvest_client(cfg, db)
+        return await client.send_invoice(harvest_invoice_id)
 
 
 @async_tool
 async def create_project(name: str, client_id: str, budget_hours: int) -> dict[str, Any]:
-    """Create a new Harvest project. Used during kickoff."""
-    ctx = get_agent_context()
-    client = create_harvest_client(ctx.cfg, _conn(ctx))
-    args = {"name": name, "client_id": client_id, "budget_hours": budget_hours}
-    try:
-        resp = await client.create_project(args)
-        record_tool_call("create_project", args, response=resp, http_status=201)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("create_project", args, error=str(e))
-        raise
+    """Create a new Harvest project. Used during kickoff.
+
+    The orchestrator passes whatever it pulled from action.params; this
+    is usually our internal Linkbook UUID, which Harvest doesn't know.
+    If client_id isn't already a numeric Harvest id, look up the client
+    name in our DB and find-or-create on Harvest. Also fills the
+    Harvest-required is_billable/bill_by fields the orchestrator can't
+    be expected to know about.
+    """
+    from ..db.models import Client as LinkbookClient
+
+    with tool_resources() as (cfg, db):
+        client = _harvest_client(cfg, db)
+
+        harvest_client_id: int
+        if client_id.isdigit():
+            harvest_client_id = int(client_id)
+        else:
+            row = db.get(LinkbookClient, client_id)
+            client_name = row.name if row and row.name else "Linkbook Client"
+            harvest_client_id = int(await client.find_or_create_client(client_name))
+
+        return await client.create_project(
+            {
+                "name": name,
+                "client_id": harvest_client_id,
+                "is_billable": True,
+                "bill_by": "Project",
+                "budget_by": "project",
+                "budget": budget_hours,
+            }
+        )
 
 
 @async_tool
 async def archive_project(project_id: str) -> dict[str, Any]:
     """Archive a Harvest project. The true_undo for create_project."""
-    ctx = get_agent_context()
-    client = create_harvest_client(ctx.cfg, _conn(ctx))
-    try:
-        resp = await client.archive_project(project_id)
-        record_tool_call("archive_project", {"project_id": project_id}, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("archive_project", {"project_id": project_id}, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _harvest_client(cfg, db)
+        return await client.archive_project(project_id)
 
 
 @async_tool
@@ -90,30 +98,25 @@ async def log_time_entry(
     user_id: str, project_id: str, date: str, hours: float, notes: str | None = None
 ) -> dict[str, Any]:
     """Add a time entry on the operator's behalf. date is YYYY-MM-DD."""
-    ctx = get_agent_context()
-    client = create_harvest_client(ctx.cfg, _conn(ctx))
-    args = {"user_id": user_id, "project_id": project_id, "date": date, "hours": hours, "notes": notes}
-    try:
-        resp = await client.log_time_entry(args)
-        record_tool_call("log_time_entry", args, response=resp, http_status=201)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("log_time_entry", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _harvest_client(cfg, db)
+        return await client.log_time_entry(
+            {
+                "user_id": user_id,
+                "project_id": project_id,
+                "date": date,
+                "hours": hours,
+                "notes": notes,
+            }
+        )
 
 
 @async_tool
 async def list_time_entries() -> dict[str, Any]:
     """Read recent time entries."""
-    ctx = get_agent_context()
-    client = create_harvest_client(ctx.cfg, _conn(ctx))
-    try:
-        resp = await client.list_time_entries()
-        record_tool_call("list_time_entries", {}, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("list_time_entries", {}, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _harvest_client(cfg, db)
+        return await client.list_time_entries()
 
 
 def build_harvest_agent() -> Agent:

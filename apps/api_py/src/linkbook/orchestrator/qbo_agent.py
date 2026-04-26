@@ -12,11 +12,12 @@ from typing import Any
 
 from agentspan.agents import Agent
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from ..config import load_config
+from ..config import AppConfig, load_config
 from ..db.models import IntegrationConnection
 from ..integrations.qbo import create_qbo_client
-from .context import async_tool, get_agent_context, record_tool_call
+from .context import async_tool, tool_resources
 
 _INSTRUCTIONS = """\
 You handle QuickBooks actions for a small design studio.
@@ -37,72 +38,48 @@ ID is in the params. Verify the amount matches the payment before applying.
 """
 
 
-def _conn(ctx) -> IntegrationConnection:
-    conn = ctx.db.execute(
+def _qbo_client(cfg: AppConfig, db: Session):
+    conn = db.execute(
         select(IntegrationConnection).where(IntegrationConnection.source == "qbo")
     ).scalar_one_or_none()
     if conn is None:
         raise RuntimeError("qbo integration not connected")
-    return conn
+    return create_qbo_client(cfg, conn)
 
 
 @async_tool
 async def get_invoice(invoice_id: str) -> dict[str, Any]:
     """Fetch a single invoice's current status. Read-only."""
-    ctx = get_agent_context()
-    client = create_qbo_client(ctx.cfg, _conn(ctx))
-    try:
+    with tool_resources() as (cfg, db):
+        client = _qbo_client(cfg, db)
         resp = await client.get_invoice(invoice_id)
-        record_tool_call("get_invoice", {"invoice_id": invoice_id}, response=resp, http_status=200)
         return resp or {"status": "not_found"}
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("get_invoice", {"invoice_id": invoice_id}, error=str(e))
-        raise
 
 
 @async_tool
 async def apply_payment(payment_id: str, invoice_id: str, amount_cents: int) -> dict[str, Any]:
     """Link a received payment to an invoice."""
-    ctx = get_agent_context()
-    client = create_qbo_client(ctx.cfg, _conn(ctx))
-    args = {"payment_id": payment_id, "invoice_id": invoice_id, "amount_cents": amount_cents}
-    try:
-        resp = await client.apply_payment(args)
-        record_tool_call("apply_payment", args, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("apply_payment", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _qbo_client(cfg, db)
+        return await client.apply_payment(
+            {"payment_id": payment_id, "invoice_id": invoice_id, "amount_cents": amount_cents}
+        )
 
 
 @async_tool
 async def mark_invoice_paid(invoice_id: str) -> dict[str, Any]:
     """Mark an invoice as paid manually (compensating-undoable via void)."""
-    ctx = get_agent_context()
-    client = create_qbo_client(ctx.cfg, _conn(ctx))
-    args = {"invoice_id": invoice_id, "mark": "paid"}
-    try:
-        resp = await client.update_invoice(args)
-        record_tool_call("mark_invoice_paid", args, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("mark_invoice_paid", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _qbo_client(cfg, db)
+        return await client.update_invoice({"invoice_id": invoice_id, "mark": "paid"})
 
 
 @async_tool
 async def void_invoice(invoice_id: str) -> dict[str, Any]:
     """Void an invoice. Used as the compensating undo for an erroneous mark_paid."""
-    ctx = get_agent_context()
-    client = create_qbo_client(ctx.cfg, _conn(ctx))
-    args = {"invoice_id": invoice_id, "mark": "voided"}
-    try:
-        resp = await client.update_invoice(args)
-        record_tool_call("void_invoice", args, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("void_invoice", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client = _qbo_client(cfg, db)
+        return await client.update_invoice({"invoice_id": invoice_id, "mark": "voided"})
 
 
 def build_qbo_agent() -> Agent:

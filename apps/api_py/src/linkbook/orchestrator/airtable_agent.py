@@ -12,11 +12,12 @@ from typing import Any
 
 from agentspan.agents import Agent
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from ..config import load_config
+from ..config import AppConfig, load_config
 from ..db.models import IntegrationConnection
 from ..integrations.airtable import create_airtable_client
-from .context import async_tool, get_agent_context, record_tool_call
+from .context import async_tool, tool_resources
 
 _INSTRUCTIONS = """\
 You handle Airtable actions for a small design studio.
@@ -32,72 +33,41 @@ We never restructure the studio's base.
 """
 
 
-def _conn(ctx) -> IntegrationConnection:
-    conn = ctx.db.execute(
+def _airtable_client_and_target(cfg: AppConfig, db: Session):
+    """Return (client, base_id, table_id) for the Projects table."""
+    conn = db.execute(
         select(IntegrationConnection).where(IntegrationConnection.source == "airtable")
     ).scalar_one_or_none()
     if conn is None:
         raise RuntimeError("airtable not connected")
-    return conn
-
-
-def _base_and_table(ctx) -> tuple[str, str]:
-    """Pull the base/table mapping from the connection's metadata."""
-    conn = _conn(ctx)
     meta = conn.metadata_ or {}
-    return (
-        str(meta.get("base_id", "app_demo")),
-        str(meta.get("projects_table_id", "tbl_projects")),
-    )
+    base_id = str(meta.get("base_id", "app_demo"))
+    table_id = str(meta.get("projects_table_id", "tbl_projects"))
+    return create_airtable_client(cfg, conn), base_id, table_id
 
 
 @async_tool
 async def create_record(fields: dict[str, Any]) -> dict[str, Any]:
     """Create a record in the configured Projects table."""
-    ctx = get_agent_context()
-    client = create_airtable_client(ctx.cfg, _conn(ctx))
-    base_id, table_id = _base_and_table(ctx)
-    args = {"baseId": base_id, "tableId": table_id, "fields": fields}
-    try:
-        resp = await client.create_records(base_id, table_id, [{"fields": fields}])
-        record_tool_call("create_record", args, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("create_record", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client, base_id, table_id = _airtable_client_and_target(cfg, db)
+        return await client.create_records(base_id, table_id, [{"fields": fields}])
 
 
 @async_tool
 async def update_record(record_id: str, fields: dict[str, Any]) -> dict[str, Any]:
     """Update fields on an existing record."""
-    ctx = get_agent_context()
-    client = create_airtable_client(ctx.cfg, _conn(ctx))
-    base_id, table_id = _base_and_table(ctx)
-    args = {"baseId": base_id, "tableId": table_id, "record_id": record_id, "fields": fields}
-    try:
-        resp = await client.update_record(base_id, table_id, record_id, fields)
-        record_tool_call("update_record", args, response=resp, http_status=200)
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("update_record", args, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client, base_id, table_id = _airtable_client_and_target(cfg, db)
+        return await client.update_record(base_id, table_id, record_id, fields)
 
 
 @async_tool
 async def list_records() -> dict[str, Any]:
     """List records from the configured Projects table."""
-    ctx = get_agent_context()
-    client = create_airtable_client(ctx.cfg, _conn(ctx))
-    base_id, table_id = _base_and_table(ctx)
-    try:
-        resp = await client.list_records(base_id, table_id)
-        record_tool_call(
-            "list_records", {"baseId": base_id, "tableId": table_id}, response=resp, http_status=200
-        )
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("list_records", {"baseId": base_id, "tableId": table_id}, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        client, base_id, table_id = _airtable_client_and_target(cfg, db)
+        return await client.list_records(base_id, table_id)
 
 
 def build_airtable_agent() -> Agent:

@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import Any
 
 from agentspan.agents import Agent
+from sqlalchemy import select
 
 from ..config import load_config
+from ..db.models import IntegrationConnection
 from ..integrations.gmail import create_gmail_client
-from .context import async_tool, get_agent_context, record_tool_call
+from .context import async_tool, tool_resources
 
 _INSTRUCTIONS = """\
 You handle Gmail actions for a small design studio.
@@ -34,58 +36,29 @@ You do not read or summarize email bodies.
 @async_tool
 async def send_email(to: str, subject: str, body: str, cc: list[str] | None = None) -> dict[str, Any]:
     """Send a plain-text email via Gmail. Returns Gmail's response."""
-    ctx = get_agent_context()
-    cfg = ctx.cfg
-    from sqlalchemy import select
-    from ..db.models import IntegrationConnection
-
-    conn = ctx.db.execute(
-        select(IntegrationConnection).where(IntegrationConnection.source == "gmail")
-    ).scalar_one_or_none()
-    if conn is None:
-        record_tool_call("send_email", {"to": to, "subject": subject}, error="gmail not connected")
-        raise RuntimeError("gmail integration not connected")
-    client = create_gmail_client(cfg, conn)
-    try:
-        resp = await client.send({"to": to, "cc": cc or [], "subject": subject, "body": body, "thread_id": None})
-        record_tool_call(
-            "send_email",
-            {"to": to, "subject": subject, "cc": cc or []},
-            response=resp,
-            http_status=200,
+    with tool_resources() as (cfg, db):
+        conn = db.execute(
+            select(IntegrationConnection).where(IntegrationConnection.source == "gmail")
+        ).scalar_one_or_none()
+        if conn is None:
+            raise RuntimeError("gmail integration not connected")
+        client = create_gmail_client(cfg, conn)
+        return await client.send(
+            {"to": to, "cc": cc or [], "subject": subject, "body": body, "thread_id": None}
         )
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("send_email", {"to": to, "subject": subject}, error=str(e))
-        raise
 
 
 @async_tool
 async def apply_labels(thread_id: str, add_label_ids: list[str]) -> dict[str, Any]:
     """Apply Gmail labels to a thread."""
-    ctx = get_agent_context()
-    from sqlalchemy import select
-    from ..db.models import IntegrationConnection
-
-    conn = ctx.db.execute(
-        select(IntegrationConnection).where(IntegrationConnection.source == "gmail")
-    ).scalar_one_or_none()
-    if conn is None:
-        record_tool_call("apply_labels", {"thread_id": thread_id, "add": add_label_ids}, error="gmail not connected")
-        raise RuntimeError("gmail integration not connected")
-    client = create_gmail_client(ctx.cfg, conn)
-    try:
-        resp = await client.apply_labels(thread_id, add_label_ids)
-        record_tool_call(
-            "apply_labels",
-            {"thread_id": thread_id, "add": add_label_ids},
-            response=resp,
-            http_status=200,
-        )
-        return resp
-    except Exception as e:  # noqa: BLE001
-        record_tool_call("apply_labels", {"thread_id": thread_id, "add": add_label_ids}, error=str(e))
-        raise
+    with tool_resources() as (cfg, db):
+        conn = db.execute(
+            select(IntegrationConnection).where(IntegrationConnection.source == "gmail")
+        ).scalar_one_or_none()
+        if conn is None:
+            raise RuntimeError("gmail integration not connected")
+        client = create_gmail_client(cfg, conn)
+        return await client.apply_labels(thread_id, add_label_ids)
 
 
 def build_gmail_agent() -> Agent:

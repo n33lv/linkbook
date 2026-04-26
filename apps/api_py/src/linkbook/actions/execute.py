@@ -239,12 +239,20 @@ async def execute_action(
         # §5.3 — agent-driven dispatch when the toggle is on AND the SDK
         # / Anthropic key / Agentspan server is available. Lazy-falls
         # through to the manual dispatcher per-action.
+        #
+        # project.kickoff is intentionally excluded: it's a 4-leg
+        # composite (harvest + airtable + drive + gmail) where the legs
+        # need to run in a deterministic order with per-leg audit rows
+        # and partial-failure recovery. Letting an LLM orchestrate that
+        # was empirically flaky — the deterministic _dispatch_kickoff
+        # path is the canonical implementation and stays here.
         if cfg.USE_AGENT_DISPATCH and action.type not in (
             "task.create",
             "event.snooze",
             "event.dismiss",
             "event.mark_done",
             "project.mark_complete",
+            "project.kickoff",
         ):
             handled = await _try_dispatch_via_agents(cfg, db, log, action)
             if handled is not None:

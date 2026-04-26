@@ -44,6 +44,18 @@ CLIENTS = [
     ("Foxglove Press", 3),
     ("Marlowe Editorial", 3),
     ("Kestrel & Co.", 3),
+    # Extra clients added so the bulk_contracts list below can spawn
+    # more project.kickoff actions for end-to-end Harvest testing.
+    ("Driftwood Studio", 2),
+    ("Ember Lane", 3),
+    ("Saltbrook Co.", 2),
+    ("Wren & Quill", 3),
+    ("Northern Compass", 1),
+    ("Glasshouse Goods", 2),
+    ("Tidewater Press", 3),
+    ("Coastal Common", 2),
+    ("Briarwood Editorial", 3),
+    ("Almanac & Co.", 2),
 ]
 
 PROJECTS = [
@@ -459,12 +471,38 @@ async def main() -> int:
                 ),
             )
 
-        # 4 more contract.signed → 4 Project Concierge kickoff drafts.
+        # contract.signed events → Project Concierge kickoff drafts. Each
+        # one becomes a project.kickoff action that creates a real Harvest
+        # client + project on approve.
+        #
+        # Naming policy (defensive, avoids any chance of upstream parsing
+        # surprises across Harvest, Airtable, Drive, and downstream
+        # invoice line items):
+        #   - ASCII letters, digits, spaces, hyphens only
+        #   - no em-dash, no special punctuation
+        #   - no leading/trailing whitespace; no double spaces
+        #   - unique titles within this seed run
+        # Harvest also enforces project-name uniqueness per account, so
+        # if a previous seed run created identical projects you'll see
+        # collisions until you delete them in Harvest. Re-seeding here
+        # uses the same titles intentionally — running a kickoff twice
+        # against a real Harvest tenant is a real-world conflict the
+        # find_or_create logic doesn't yet handle.
         bulk_contracts = [
-            ("Cypress Bay", "sig_cypressbay_msa", "Cypress Bay — MSA"),
-            ("Foxglove Press", "sig_foxglove_editorial", "Foxglove Press — Editorial Retainer"),
-            ("Meadowlark Co.", "sig_meadowlark_brand", "Meadowlark Co. — Brand Sprint"),
-            ("Hill & Houseman", "sig_hillhouseman_print", "Hill & Houseman — Print System"),
+            ("Cypress Bay", "sig_cypressbay_msa", "Cypress Bay - MSA"),
+            ("Foxglove Press", "sig_foxglove_editorial", "Foxglove Press - Editorial Retainer"),
+            ("Meadowlark Co.", "sig_meadowlark_brand", "Meadowlark - Brand Sprint"),
+            ("Hill & Houseman", "sig_hillhouseman_print", "Hill and Houseman - Print System"),
+            ("Driftwood Studio", "sig_driftwood_identity", "Driftwood Studio - Identity Sprint"),
+            ("Ember Lane", "sig_emberlane_brand", "Ember Lane - Brand Refresh"),
+            ("Saltbrook Co.", "sig_saltbrook_pkg", "Saltbrook - Packaging Refresh"),
+            ("Wren & Quill", "sig_wrenquill_editorial", "Wren and Quill - Editorial Retainer"),
+            ("Northern Compass", "sig_northern_msa", "Northern Compass - MSA"),
+            ("Glasshouse Goods", "sig_glasshouse_dtc", "Glasshouse Goods - DTC Site"),
+            ("Tidewater Press", "sig_tidewater_relaunch", "Tidewater Press - Relaunch"),
+            ("Coastal Common", "sig_coastal_brand", "Coastal Common - Brand System"),
+            ("Briarwood Editorial", "sig_briarwood_books", "Briarwood Editorial - Book Series"),
+            ("Almanac & Co.", "sig_almanac_microsite", "Almanac - Microsite"),
         ]
         for client_name, sig_id, title in bulk_contracts:
             await ingest_event(

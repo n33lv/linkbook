@@ -1,11 +1,24 @@
-"""Per-call context for agent tools.
+"""Helpers for Agentspan tools.
 
-Agentspan tools are bare Python functions, not methods. They don't get
-ctx/db/cfg injected. We set the active context at the start of each
-dispatch (in `runtime.dispatch_via_agents`) and tools read from it.
+Architecture decision (post-PoC): tools are STATELESS. They don't read
+from a process-local ContextVar. This is required because Agentspan in
+server mode runs tools in subprocess workers spawned by the SDK, and
+ContextVars are per-process — anything we set in the API process is
+invisible to the worker.
 
-Single-process v1 is fine because the API serializes calls per dispatch.
-When we move to a worker pool, this becomes a contextvars.ContextVar.
+Instead, every tool builds its own AppConfig and opens its own DB
+session at call time. AppConfig comes from env (which workers inherit
+on spawn), and SQLite handles concurrent connections fine in WAL mode.
+
+The trade: there's no shared per-action trace. Tools just do their job
+and return JSON. The Agentspan UI shows the call sequence; the
+action-level audit row in our DB notes "executed via agent." This keeps
+tools fully portable between in-process direct mode and out-of-process
+worker mode without conditional branches.
+
+The legacy ContextVar (AgentContext / set_agent_context / get_agent_context)
+remains so manual-dispatch tests and any in-process code paths that still
+expect it don't break — but new tool code should use tool_resources().
 """
 
 from __future__ import annotations
@@ -13,14 +26,17 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Iterator, TypeVar
 
 from sqlalchemy.orm import Session
 
-from ..config import AppConfig
 from agentspan.agents import tool
+
+from ..config import AppConfig, load_config
+from ..db import open_session
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -29,12 +45,11 @@ def async_tool(fn: F) -> F:
     """Wrap an async @tool body into a sync function the Agentspan worker
     can call. Without this, the SDK's task dispatcher receives a
     coroutine object back, fails JSON-serialization, and trips the tool
-    circuit breaker after 10 retries. The wrapper runs the coroutine to
-    completion and returns the awaited value.
+    circuit breaker after 10 retries.
 
     Each call creates a fresh event loop because workers run in threads
     that don't have one. If a loop is already running (e.g. in-process
-    direct mode), we fall back to scheduling on it.
+    direct mode used by older callers), we fall back to a worker thread.
     """
     if not inspect.iscoroutinefunction(fn):
         return tool(fn)  # already sync — pass straight through
@@ -47,8 +62,6 @@ def async_tool(fn: F) -> F:
             running = None
         if running is None:
             return asyncio.run(fn(*args, **kwargs))
-        # A loop is already running on this thread (rare in worker mode,
-        # but possible in tests): run in a fresh thread to avoid nesting.
         import concurrent.futures
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
@@ -57,19 +70,35 @@ def async_tool(fn: F) -> F:
     return tool(sync_wrapper)  # type: ignore[return-value]
 
 
+@contextmanager
+def tool_resources() -> Iterator[tuple[AppConfig, Session]]:
+    """Build a per-call (AppConfig, DB session) pair for an Agentspan tool.
+
+    Each invocation gets fresh resources, which lets the same tool body
+    run identically in-process (direct mode) and in a subprocess worker
+    (server mode). The session is closed when the context exits. AppConfig
+    is a Pydantic-settings instance built from env, which workers inherit.
+    """
+    cfg = load_config()
+    db = open_session()
+    try:
+        yield cfg, db
+    finally:
+        db.close()
+
+
+# ---------- legacy ContextVar (kept for non-agent code paths) ----------
+# Code that doesn't go through Agentspan (manual dispatcher, tests that
+# poke at action context) can still rely on these. New tool code should
+# use tool_resources() instead.
+
+
 @dataclass
 class AgentContext:
     cfg: AppConfig
     db: Session
-    # The action this agent run is fulfilling. Tools read action_id /
-    # subject_ref so they can attribute their HTTP calls back to the
-    # right audit row.
     action_id: str
     subject_ref: str
-    # Captured tool-call trace for the audit log. Each entry: {tool,
-    # args, response, http_status (optional), error (optional)}. The
-    # dispatcher writes this into audit_events on action.succeeded /
-    # action.failed.
     trace: list[dict[str, Any]]
 
 
@@ -94,8 +123,14 @@ def record_tool_call(
     http_status: int | None = None,
     error: str | None = None,
 ) -> None:
-    """Append a tool-call entry to the active context's trace."""
-    ctx = get_agent_context()
+    """Append a tool-call entry to the active context's trace.
+
+    No-op in worker mode (no ContextVar). Kept so legacy callers don't
+    crash; the canonical trace is the Agentspan UI.
+    """
+    ctx = _CTX.get()
+    if ctx is None:
+        return
     entry: dict[str, Any] = {"tool": tool, "args": args}
     if response is not None:
         entry["response"] = response
