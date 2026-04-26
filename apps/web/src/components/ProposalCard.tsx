@@ -94,6 +94,16 @@ export function ProposalCard({ action, onChange }: { action: ActionRow; onChange
           </span>
         </span>
       </div>
+      {action.target_sources && action.target_sources.length > 0 && (
+        <div className="proposal-targets">
+          <span className="proposal-targets-arrow">→</span>
+          {action.target_sources.map((s) => (
+            <span key={s} className={`src ${s}`}>
+              {s.toUpperCase()}
+            </span>
+          ))}
+        </div>
+      )}
       {action.agent_rationale && <div className="proposal-rationale">{action.agent_rationale}</div>}
       <div className="proposal-preview">{action.preview || formatParams(action.params)}</div>
       <div className="proposal-foot">

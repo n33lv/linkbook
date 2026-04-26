@@ -28,6 +28,27 @@ async def handle(req: HttpRequest, path: str) -> HttpResponse:
             201, {"id": m.group(1), "status": "sent", "sent_at": datetime.now(timezone.utc).isoformat()}
         )
 
+    # List clients (used by find_or_create_client to look up an existing
+    # Harvest client by name before creating a project).
+    if req.method == "GET" and path == "/v2/clients":
+        return json_response(
+            200,
+            {
+                "clients": [
+                    {"id": c["id"], "name": c["name"], "is_active": True}
+                    for c in store.harvest_clients.values()
+                ]
+            },
+        )
+
+    # Create client (called when find_or_create_client doesn't find one
+    # by name above).
+    if req.method == "POST" and path == "/v2/clients":
+        body = req.body or {}
+        new_id = int(time.time() * 1000)
+        store.harvest_clients[str(new_id)] = {"id": new_id, "name": body.get("name", "")}
+        return json_response(201, {"id": new_id, "name": body.get("name", "")})
+
     # Create project
     if req.method == "POST" and path == "/v2/projects":
         body = req.body or {}

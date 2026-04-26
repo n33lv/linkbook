@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentspan.agents import Agent, tool
+from agentspan.agents import Agent
 from sqlalchemy import select
 
 from ..config import load_config
 from ..db.models import IntegrationConnection
 from ..integrations.harvest import create_harvest_client
-from .context import get_agent_context, record_tool_call
+from .context import async_tool, get_agent_context, record_tool_call
 
 _INSTRUCTIONS = """\
 You handle Harvest actions for a small design studio.
@@ -40,7 +40,7 @@ def _conn(ctx) -> IntegrationConnection:
     return conn
 
 
-@tool
+@async_tool
 async def send_invoice(harvest_invoice_id: str) -> dict[str, Any]:
     """Send a Harvest invoice that's already drafted."""
     ctx = get_agent_context()
@@ -56,7 +56,7 @@ async def send_invoice(harvest_invoice_id: str) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def create_project(name: str, client_id: str, budget_hours: int) -> dict[str, Any]:
     """Create a new Harvest project. Used during kickoff."""
     ctx = get_agent_context()
@@ -71,7 +71,7 @@ async def create_project(name: str, client_id: str, budget_hours: int) -> dict[s
         raise
 
 
-@tool
+@async_tool
 async def archive_project(project_id: str) -> dict[str, Any]:
     """Archive a Harvest project. The true_undo for create_project."""
     ctx = get_agent_context()
@@ -85,7 +85,7 @@ async def archive_project(project_id: str) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def log_time_entry(
     user_id: str, project_id: str, date: str, hours: float, notes: str | None = None
 ) -> dict[str, Any]:
@@ -102,7 +102,7 @@ async def log_time_entry(
         raise
 
 
-@tool
+@async_tool
 async def list_time_entries() -> dict[str, Any]:
     """Read recent time entries."""
     ctx = get_agent_context()

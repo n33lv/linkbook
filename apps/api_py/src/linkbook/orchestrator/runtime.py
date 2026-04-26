@@ -182,16 +182,22 @@ async def dispatch_via_agents(
         agents = get_agents()
         prompt = _build_prompt(action)
 
-        # In server mode we deploy once and dispatch by name so the UI
-        # records it. In direct mode we hand the Agent object straight to
-        # run() and the SDK executes it locally.
+        # We always pass the Agent OBJECT (not the name). Why:
+        # - Tools rely on per-dispatch AgentContext that we set in this
+        #   process. Running by name in server mode dispatches tool tasks
+        #   to a separate worker process where that ContextVar is empty,
+        #   so tools fail with "called outside of an agent dispatch".
+        # - Passing the object keeps tool execution in-process where the
+        #   context exists. The SDK still POSTs the run to the server (when
+        #   AGENTSPAN_SERVER_URL is set), so the UI tracks it.
+        # If a server URL is set we still push agent definitions once, so
+        # the UI knows about the agents — but the run executes locally.
         if _server_mode(cfg):
             _ensure_deployed(cfg, log)
-            target: Any = "orchestrator"
-            mode = "server"
+            mode = "in-process+ui"
         else:
-            target = agents["orchestrator"]
-            mode = "direct"
+            mode = "in-process"
+        target = agents["orchestrator"]
 
         log.info(
             {"action_id": action.id, "type": action.type, "mode": mode},

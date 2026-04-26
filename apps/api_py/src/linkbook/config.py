@@ -52,6 +52,13 @@ class AppConfig(BaseSettings):
 
     USE_INTEGRATION_MOCKS: bool = True
 
+    # Per-source escape hatch for the all-or-nothing mock toggle. Sources
+    # listed here go to the real httpx transport even when
+    # USE_INTEGRATION_MOCKS=true. Comma-separated, e.g. "harvest" or
+    # "harvest,qbo". Lets you exercise one real integration during a PoC
+    # while everything else stays on safe mocks.
+    INTEGRATION_LIVE_SOURCES: str = ""
+
     # §5.3 — when true, action.execute routes through the Agentspan
     # orchestrator instead of the manual dispatcher. Default off in v1
     # so the test suite stays green without an Agentspan server / API key.
@@ -112,6 +119,36 @@ class AppConfig(BaseSettings):
 
 def load_config() -> AppConfig:
     return AppConfig()  # type: ignore[call-arg]
+
+
+# Hostname → source name. Used by the mock transport to decide whether
+# a request should pass through to the real httpx transport.
+INTEGRATION_HOST_SOURCES: dict[str, str] = {
+    "intuit.com": "qbo",
+    "quickbooks": "qbo",
+    "harvestapp.com": "harvest",
+    "harvest.com": "harvest",
+    "dropboxsign.com": "dropboxsign",
+    "hellosign.com": "dropboxsign",
+    "airtable.com": "airtable",
+    "googleapis.com": "gmail",
+    "gmail.com": "gmail",
+}
+
+
+def live_sources(cfg: AppConfig) -> set[str]:
+    """Parse INTEGRATION_LIVE_SOURCES into a normalized set."""
+    if not cfg.INTEGRATION_LIVE_SOURCES:
+        return set()
+    return {s.strip().lower() for s in cfg.INTEGRATION_LIVE_SOURCES.split(",") if s.strip()}
+
+
+def source_for_host(host: str) -> str | None:
+    """Pick the integration source that owns this hostname, or None."""
+    for marker, source in INTEGRATION_HOST_SOURCES.items():
+        if marker in host:
+            return source
+    return None
 
 
 def sqlalchemy_url(database_url: str) -> str:

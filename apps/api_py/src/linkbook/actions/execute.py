@@ -38,6 +38,41 @@ SOURCE_MUTATING = {
     "project.mark_complete",
 }
 
+# Map of action.type → integrations the action will read from or write to
+# when it runs. Static and deterministic — driven by the dispatcher
+# logic in this file, not by what the LLM might do at runtime. The UI
+# uses this to show operators which systems they're about to touch.
+#
+# Empty list means the action is purely Linkbook-internal (e.g. snooze,
+# self-nudge to Slack, mark-done). Multi-source means a composite that
+# fans out — `project.kickoff` is the canonical example.
+ACTION_TARGET_SOURCES: dict[str, list[str]] = {
+    "invoice.remind": ["gmail"],
+    "invoice.send": ["harvest"],
+    "invoice.mark_paid_manual": ["qbo"],
+    "payment.apply": ["qbo"],
+    "contract.send_reminder": ["dropboxsign"],
+    "contract.create_from_template": ["dropboxsign"],
+    "project.kickoff": ["harvest", "airtable", "gmail"],
+    "project.update_status": ["airtable"],
+    "project.mark_complete": [],
+    "time.log_entry": ["harvest"],
+    "time.self_nudge": [],
+    "email.send_draft": ["gmail"],
+    "task.create": [],
+    "event.snooze": [],
+    "event.dismiss": [],
+    "event.mark_done": [],
+}
+
+
+def target_sources_for(action_type: str) -> list[str]:
+    """Return the list of integrations an action of this type will touch.
+    Unknown types are treated as empty (no chips rendered) rather than
+    blowing up — keeps the UI resilient if a new type ships before this
+    map is updated."""
+    return ACTION_TARGET_SOURCES.get(action_type, [])
+
 
 @dataclass
 class DispatchTrace:
@@ -559,8 +594,39 @@ async def _run_leg(
         if conn is None:
             raise RuntimeError("harvest not connected")
         client = create_harvest_client(cfg, conn)
-        resp = await client.create_project(params)
-        return DispatchTrace(request=params, response=resp, http_status=201)
+
+        # Real Harvest rejects projects whose client_id is unknown to it.
+        # Linkbook's `client_id` is our internal UUID, so we have to
+        # resolve a real Harvest client_id first. Look up our client by
+        # UUID to get the display name, then find-or-create on Harvest.
+        # In mock mode the mock just accepts whatever id we send.
+        from ..db.models import Client as LinkbookClient
+
+        lb_client_id = params.get("client_id")
+        client_name = "Linkbook Client"
+        if lb_client_id:
+            row = db.get(LinkbookClient, lb_client_id)
+            if row is not None and row.name:
+                client_name = row.name
+        harvest_client_id = await client.find_or_create_client(client_name)
+
+        # Build the Harvest project payload from our leg params, swapping
+        # in the resolved Harvest client_id. is_billable + bill_by are
+        # required by Harvest's API.
+        harvest_payload = {
+            "name": params["name"],
+            "client_id": int(harvest_client_id),
+            "is_billable": True,
+            "bill_by": "Project",
+            "budget_by": "project",
+            "budget": params.get("budget_hours"),
+        }
+        resp = await client.create_project(harvest_payload)
+        return DispatchTrace(
+            request={**params, "harvest_client_id": harvest_client_id},
+            response=resp,
+            http_status=201,
+        )
     if target == "airtable:insert_record":
         conn = _connection(db, "airtable")
         if conn is None:

@@ -22,6 +22,10 @@ export type ActionRow = {
   originating_event_id: string | null;
   idempotency_key: string;
   queued_until: string | null;
+  // Integrations the action will read from or write to. May be empty
+  // for Linkbook-internal actions, or multiple for composite actions
+  // (e.g. project.kickoff fans out to harvest + airtable + gmail).
+  target_sources: Source[];
   created_at: string;
 };
 
@@ -111,9 +115,11 @@ export type IntegrationsResp = {
   connections: Array<{
     id: string;
     source: Source;
+    external_account_id: string;
     status: string;
     display_name: string | null;
     last_sync_at: string | null;
   }>;
   mocks: boolean;
+  live_sources: string[];
 };

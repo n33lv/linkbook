@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentspan.agents import Agent, tool
+from agentspan.agents import Agent
 from sqlalchemy import select
 
 from ..config import load_config
 from ..db.models import IntegrationConnection
 from ..integrations.qbo import create_qbo_client
-from .context import get_agent_context, record_tool_call
+from .context import async_tool, get_agent_context, record_tool_call
 
 _INSTRUCTIONS = """\
 You handle QuickBooks actions for a small design studio.
@@ -46,7 +46,7 @@ def _conn(ctx) -> IntegrationConnection:
     return conn
 
 
-@tool
+@async_tool
 async def get_invoice(invoice_id: str) -> dict[str, Any]:
     """Fetch a single invoice's current status. Read-only."""
     ctx = get_agent_context()
@@ -60,7 +60,7 @@ async def get_invoice(invoice_id: str) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def apply_payment(payment_id: str, invoice_id: str, amount_cents: int) -> dict[str, Any]:
     """Link a received payment to an invoice."""
     ctx = get_agent_context()
@@ -75,7 +75,7 @@ async def apply_payment(payment_id: str, invoice_id: str, amount_cents: int) -> 
         raise
 
 
-@tool
+@async_tool
 async def mark_invoice_paid(invoice_id: str) -> dict[str, Any]:
     """Mark an invoice as paid manually (compensating-undoable via void)."""
     ctx = get_agent_context()
@@ -90,7 +90,7 @@ async def mark_invoice_paid(invoice_id: str) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def void_invoice(invoice_id: str) -> dict[str, Any]:
     """Void an invoice. Used as the compensating undo for an erroneous mark_paid."""
     ctx = get_agent_context()

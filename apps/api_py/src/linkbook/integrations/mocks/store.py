@@ -102,6 +102,7 @@ class MockStore:
     contract_reminders: list[dict[str, Any]] = field(default_factory=list)
     airtable_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     harvest_projects: dict[str, dict[str, Any]] = field(default_factory=dict)
+    harvest_clients: dict[str, dict[str, Any]] = field(default_factory=dict)
     drive_folders: list[dict[str, Any]] = field(default_factory=list)
     failures: FailureRegistry = field(default_factory=FailureRegistry)
 
@@ -124,5 +125,6 @@ def reset_mock_store() -> None:
     s.contract_reminders.clear()
     s.airtable_records.clear()
     s.harvest_projects.clear()
+    s.harvest_clients.clear()
     s.drive_folders.clear()
     s.failures.reset()

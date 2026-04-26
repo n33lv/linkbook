@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentspan.agents import Agent, tool
+from agentspan.agents import Agent
 from sqlalchemy import select
 
 from ..config import load_config
 from ..db.models import IntegrationConnection
 from ..integrations.dropboxsign import create_dropboxsign_client
-from .context import get_agent_context, record_tool_call
+from .context import async_tool, get_agent_context, record_tool_call
 
 _INSTRUCTIONS = """\
 You handle Dropbox Sign actions for a small design studio.
@@ -33,7 +33,7 @@ def _conn(ctx) -> IntegrationConnection:
     return conn
 
 
-@tool
+@async_tool
 async def send_reminder(signature_request_id: str) -> dict[str, Any]:
     """Nudge a counterparty whose signature is pending."""
     ctx = get_agent_context()
@@ -54,7 +54,7 @@ async def send_reminder(signature_request_id: str) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def send_from_template(template_id: str, recipient: str, title: str) -> dict[str, Any]:
     """Create + send a new signature request from a saved template."""
     ctx = get_agent_context()
@@ -69,7 +69,7 @@ async def send_from_template(template_id: str, recipient: str, title: str) -> di
         raise
 
 
-@tool
+@async_tool
 async def cancel(signature_request_id: str) -> dict[str, Any]:
     """Void a sent signature request."""
     ctx = get_agent_context()

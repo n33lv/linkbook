@@ -382,6 +382,28 @@ a { color: inherit; text-decoration: none; }
   position: absolute; left: 0; top: 0; bottom: 0;
   background: linear-gradient(90deg, var(--signal-deep), var(--signal));
 }
+.proposal-targets {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--f-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: .14em;
+  color: var(--bone-3);
+}
+.proposal-targets-arrow {
+  color: var(--bone-3);
+  margin-right: 2px;
+}
+.proposal-targets .src {
+  display: inline-flex; align-items: center;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+}
+.proposal-targets .src.qbo { color: #92B68F; }
+.proposal-targets .src.harvest { color: #D8B070; }
+.proposal-targets .src.dropboxsign { color: #7E9FCE; }
+.proposal-targets .src.airtable { color: #C68B98; }
+.proposal-targets .src.gmail { color: #C97A6E; }
 .proposal-rationale {
   padding: 12px 14px;
   color: var(--bone-2);

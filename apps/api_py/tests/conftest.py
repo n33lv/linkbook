@@ -20,6 +20,19 @@ def env_setup() -> Iterator[None]:
     os.environ.setdefault("STUDIO_BILLABLE_TARGET_PCT", "70")
     os.environ.setdefault("STUDIO_LOADED_COST_RATE", "85")
     os.environ.setdefault("USE_INTEGRATION_MOCKS", "true")
+    # Tests run against pure mocks. Force-clear any developer-only .env
+    # leakage that would otherwise redirect calls at real APIs / a real
+    # Agentspan server and break the suite. setdefault won't suffice
+    # because pydantic-settings reads .env on disk.
+    os.environ["INTEGRATION_LIVE_SOURCES"] = ""
+    os.environ["USE_AGENT_DISPATCH"] = "false"
+    os.environ["AGENTSPAN_SERVER_URL"] = ""
+    os.environ["AGENTSPAN_API_KEY"] = ""
+    os.environ["AGENTSPAN_LLM_MODEL"] = ""
+    os.environ["ANTHROPIC_API_KEY"] = ""
+    os.environ["HARVEST_CLIENT_ID"] = ""
+    os.environ["HARVEST_CLIENT_SECRET"] = ""
+    os.environ["HARVEST_REDIRECT_URI"] = ""
     os.environ.setdefault("LOG_LEVEL", "fatal")
     os.environ.setdefault("PORT", "3001")
     os.environ.setdefault("NODE_ENV", "test")

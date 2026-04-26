@@ -1,13 +1,17 @@
 """Mock HTTP transport. Routes requests to per-source handlers by hostname.
 
-Mirrors apps/api/src/integrations/_mocks/transport.ts.
+Per-source live escape hatch: if a hostname maps to a source listed in
+INTEGRATION_LIVE_SOURCES, this transport delegates to the real httpx
+transport instead of the mock handler. Lets you take one source live
+(e.g. harvest) while everything else stays mocked.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from ..http import HttpRequest, HttpResponse, HttpTransport, host_of, set_transport
+from ...config import live_sources, load_config, source_for_host
+from ..http import FetchTransport, HttpRequest, HttpResponse, host_of, set_transport
 from .store import get_mock_store
 
 
@@ -28,7 +32,20 @@ def consume_failure_for(key: str) -> HttpResponse | None:
 
 
 class MockTransport:
-    """Routes requests to per-source handlers by hostname."""
+    """Routes requests to per-source handlers by hostname.
+
+    Sources whose name is in INTEGRATION_LIVE_SOURCES skip mocking and
+    pass through to a real httpx transport.
+    """
+
+    def __init__(self) -> None:
+        # Built lazily so a config reload during the process can be picked
+        # up by a fresh MockTransport instance, but per-request lookup is
+        # O(1) against the cached set.
+        cfg = load_config()
+        self._live: set[str] = live_sources(cfg)
+        # Real transport reused across all live-source requests.
+        self._real: FetchTransport | None = FetchTransport() if self._live else None
 
     async def request(self, req: HttpRequest) -> HttpResponse:
         host = host_of(req.url)
@@ -36,6 +53,11 @@ class MockTransport:
 
         if not host:
             return json_response(404, {"error": f"unmocked url: {req.url}"})
+
+        # Per-source live override — bypass mocks for this request.
+        source = source_for_host(host)
+        if source and source in self._live and self._real is not None:
+            return await self._real.request(req)
 
         if "intuit.com" in host or "quickbooks" in host:
             from . import qbo

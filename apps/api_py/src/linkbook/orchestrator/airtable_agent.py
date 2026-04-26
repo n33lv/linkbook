@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentspan.agents import Agent, tool
+from agentspan.agents import Agent
 from sqlalchemy import select
 
 from ..config import load_config
 from ..db.models import IntegrationConnection
 from ..integrations.airtable import create_airtable_client
-from .context import get_agent_context, record_tool_call
+from .context import async_tool, get_agent_context, record_tool_call
 
 _INSTRUCTIONS = """\
 You handle Airtable actions for a small design studio.
@@ -51,7 +51,7 @@ def _base_and_table(ctx) -> tuple[str, str]:
     )
 
 
-@tool
+@async_tool
 async def create_record(fields: dict[str, Any]) -> dict[str, Any]:
     """Create a record in the configured Projects table."""
     ctx = get_agent_context()
@@ -67,7 +67,7 @@ async def create_record(fields: dict[str, Any]) -> dict[str, Any]:
         raise
 
 
-@tool
+@async_tool
 async def update_record(record_id: str, fields: dict[str, Any]) -> dict[str, Any]:
     """Update fields on an existing record."""
     ctx = get_agent_context()
@@ -83,7 +83,7 @@ async def update_record(record_id: str, fields: dict[str, Any]) -> dict[str, Any
         raise
 
 
-@tool
+@async_tool
 async def list_records() -> dict[str, Any]:
     """List records from the configured Projects table."""
     ctx = get_agent_context()

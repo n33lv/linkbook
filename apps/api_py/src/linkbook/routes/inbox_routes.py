@@ -65,6 +65,8 @@ def _serialize_event(e: Event, proposed: list[Action], client: Client | None) ->
 
 
 def _serialize_action(a: Action) -> dict[str, Any]:
+    from ..actions.execute import target_sources_for
+
     return {
         "id": a.id,
         "type": a.type,
@@ -79,6 +81,9 @@ def _serialize_action(a: Action) -> dict[str, Any]:
         "preview": a.preview,
         "originating_event_id": a.originating_event_id,
         "subject_ref": a.subject_ref,
+        # Integrations this action will touch when it runs. Driven by
+        # action.type — see ACTION_TARGET_SOURCES.
+        "target_sources": target_sources_for(a.type),
         "executed_at": a.executed_at.isoformat() + "Z" if a.executed_at else None,
         "undo_token": a.undo_token,
         "queued_until": a.queued_until.isoformat() + "Z" if a.queued_until else None,

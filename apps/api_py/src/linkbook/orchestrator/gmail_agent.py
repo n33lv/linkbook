@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentspan.agents import Agent, tool
+from agentspan.agents import Agent
 
 from ..config import load_config
 from ..integrations.gmail import create_gmail_client
-from .context import get_agent_context, record_tool_call
+from .context import async_tool, get_agent_context, record_tool_call
 
 _INSTRUCTIONS = """\
 You handle Gmail actions for a small design studio.
@@ -31,7 +31,7 @@ You do not read or summarize email bodies.
 """
 
 
-@tool
+@async_tool
 async def send_email(to: str, subject: str, body: str, cc: list[str] | None = None) -> dict[str, Any]:
     """Send a plain-text email via Gmail. Returns Gmail's response."""
     ctx = get_agent_context()
@@ -60,7 +60,7 @@ async def send_email(to: str, subject: str, body: str, cc: list[str] | None = No
         raise
 
 
-@tool
+@async_tool
 async def apply_labels(thread_id: str, add_label_ids: list[str]) -> dict[str, Any]:
     """Apply Gmail labels to a thread."""
     ctx = get_agent_context()
@@ -108,5 +108,5 @@ def _resolve_model(cfg) -> str:
     if cfg.AGENTSPAN_LLM_MODEL:
         return cfg.AGENTSPAN_LLM_MODEL
     if cfg.ANTHROPIC_API_KEY:
-        return "anthropic/claude-3-5-sonnet-latest"
+        return "anthropic/claude-sonnet-4-6"
     return "openai/gpt-4o-mini"
